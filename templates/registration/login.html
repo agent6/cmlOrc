@@ -1,0 +1,20 @@
+{% extends "orchestrator/base.html" %}
+{% block content %}
+<div class="container" style="max-width:420px; margin-top: 80px;">
+  <h2>Sign in</h2>
+  <form method="post">
+    {% csrf_token %}
+    {{ form.non_field_errors }}
+    <div class="mb-3">
+      <label class="form-label">Username</label>
+      {{ form.username }}
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Password</label>
+      {{ form.password }}
+    </div>
+    <button class="btn btn-primary" type="submit">Login</button>
+  </form>
+</div>
+{% endblock %}
+

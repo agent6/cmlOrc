@@ -1,0 +1,19 @@
+{% load orchestrator_extras %}
+<tr id="server-row-{{ s.pk }}" hx-get="{% url 'orchestrator:server_row' s.pk %}" hx-trigger="every 5s" hx-swap="outerHTML">
+  <td>{{ s.name }}</td>
+  <td>{{ s.base_url }}</td>
+  <td><span class="badge {% if s.status == 'available' %}bg-success{% elif s.status == 'in_use' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">{{ s.get_status_display }}</span></td>
+  <td>{% if s.assigned_to %}{{ s.assigned_to.username }}{% else %}-{% endif %}</td>
+  <td>{% if s.assigned_lab_name %}{{ s.assigned_lab_name }}{% elif s.assigned_lab_uuid %}{{ s.assigned_lab_uuid }}{% else %}-{% endif %}</td>
+  <td>{% if s.assigned_until %}{{ s.assigned_until|time_left }}{% else %}-{% endif %}</td>
+  <td>{% if s.last_health_ok %}OK{% else %}Fail{% endif %}</td>
+  <td class="text-nowrap">
+    <a class="btn btn-outline-secondary btn-sm" href="{% url 'orchestrator:server_edit' s.pk %}">Edit</a>
+    <a class="btn btn-outline-secondary btn-sm" href="{% url 'orchestrator:server_clone' s.pk %}">Clone</a>
+    <a class="btn btn-outline-info btn-sm" href="{% url 'orchestrator:server_test' s.pk %}">Test</a>
+    {% if s.assigned_to %}
+    <a class="btn btn-outline-danger btn-sm" href="{% url 'orchestrator:server_release' s.pk %}">Release</a>
+    {% endif %}
+  </td>
+</tr>
+

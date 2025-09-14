@@ -1,0 +1,27 @@
+{% extends "orchestrator/base.html" %}
+{% block content %}
+  <h2>Uploading Lab to All Servers</h2>
+  <p class="text-muted">This will check for duplicates, remove them, and upload the new lab. Status updates stream in below.</p>
+
+  <table class="table table-sm align-middle">
+    <thead>
+      <tr>
+        <th>Server</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody id="upload-status-rows">
+      {% for s in servers %}
+      <tr hx-post="{% url 'orchestrator:labs_upload_item' s.pk %}?token={{ token }}" hx-trigger="load" hx-swap="outerHTML">
+        <td>{{ s.name }}</td>
+        <td>
+          <span class="text-muted">Checking for duplicates and uploading…</span>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <a class="btn btn-secondary" href="{% url 'orchestrator:home' %}">Back to Servers</a>
+{% endblock %}
+

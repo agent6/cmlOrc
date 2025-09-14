@@ -1,0 +1,20 @@
+<tr>
+  <td>{{ server.name }}</td>
+  <td>
+    {% if status == 'ok' %}
+      <div class="text-success">{{ message }}</div>
+    {% elif status == 'error' %}
+      <div class="text-danger">{{ message }}</div>
+    {% else %}
+      <div class="text-muted">{{ message }}</div>
+    {% endif %}
+    {% if log %}
+      <div class="small text-muted mt-1">
+        {% for line in log %}
+          <div>• {{ line }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  </td>
+</tr>
+

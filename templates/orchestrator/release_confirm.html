@@ -1,0 +1,11 @@
+{% extends "orchestrator/base.html" %}
+{% block content %}
+  <h2>Release {{ server.name }}</h2>
+  <p>Releases assignment and performs a best-effort stop and wipe of all labs.</p>
+  <form method="post">
+    {% csrf_token %}
+    <button class="btn btn-danger" type="submit">Confirm Release</button>
+    <a class="btn btn-secondary" href="{% url 'orchestrator:home' %}">Cancel</a>
+  </form>
+{% endblock %}
+

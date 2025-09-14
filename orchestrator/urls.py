@@ -1,0 +1,21 @@
+from django.urls import path
+from . import views
+
+
+app_name = "orchestrator"
+
+urlpatterns = [
+    path("", views.home, name="home"),
+    path("settings/health/", views.health_settings, name="health_settings"),
+    path("labs/upload/", views.labs_upload, name="labs_upload"),
+    path("labs/upload/item/<int:pk>/", views.labs_upload_item, name="labs_upload_item"),
+    path("assign/", views.pool_assign, name="pool_assign"),
+    path("servers/add/", views.server_add, name="server_add"),
+    path("servers/<int:pk>/edit/", views.server_edit, name="server_edit"),
+    path("servers/<int:pk>/clone/", views.server_clone, name="server_clone"),
+    path("servers/<int:pk>/test/", views.server_test, name="server_test"),
+    path("servers/<int:pk>/row/", views.server_row, name="server_row"),
+    path("servers/<int:pk>/assign/", views.server_assign, name="server_assign"),
+    path("servers/<int:pk>/release/", views.server_release, name="server_release"),
+]
+
