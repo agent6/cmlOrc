@@ -17,12 +17,14 @@ class CMLServer(models.Model):
     STATUS_AVAILABLE = "available"
     STATUS_IN_USE = "in_use"
     STATUS_UNAVAILABLE = "unavailable"
+    STATUS_INITIALIZING = "initializing"
     STATUS_CHOICES = [
         (STATUS_AVAILABLE, "Available"),
         (STATUS_IN_USE, "In Use"),
         (STATUS_UNAVAILABLE, "Unavailable"),
+        (STATUS_INITIALIZING, "Initializing"),
     ]
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_UNAVAILABLE)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_INITIALIZING)
     last_health_ok = models.BooleanField(default=False)
     last_health_at = models.DateTimeField(null=True, blank=True)
 

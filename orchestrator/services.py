@@ -97,7 +97,9 @@ def assign_server_to_student_by_name(server: CMLServer, user, lab_name_or_uuid: 
     """
     c = _client(server)
     c.authenticate()
-    lab_uuid = lab_name_or_uuid  # Name->UUID resolution omitted in this variant
+    lab_uuid = c.resolve_lab_uuid_by_name(lab_name_or_uuid)
+    if not lab_uuid:
+        raise ValueError(f"Lab not found by name or UUID: {lab_name_or_uuid}")
 
     # If same user + same lab, extend lease only
     same_user = server.assigned_to_id == getattr(user, "id", None)

@@ -300,6 +300,51 @@ class CMLClient:
                     return val
         return None
 
+    # Name/UUID helpers
+    def resolve_lab_uuid_by_name(self, name_or_uuid: str) -> Optional[str]:
+        """Return a lab UUID for a given name or UUID.
+        - If the input matches an existing UUID, returns it.
+        - Otherwise, searches labs by title/label/name and returns the UUID of an exact (case-insensitive) match.
+        """
+        target = (name_or_uuid or "").strip()
+        if not target:
+            return None
+        # First, get the list of labs
+        labs = self.list_labs()
+        # If dict mapping {uuid: name}
+        if isinstance(labs, dict):
+            # Exact UUID
+            if target in labs:
+                return target
+            # Match by name (case-insensitive)
+            lower = target.lower()
+            for uuid, nm in labs.items():
+                if isinstance(nm, str) and nm.strip().lower() == lower:
+                    return uuid
+        # If list of UUIDs
+        elif isinstance(labs, list):
+            # Exact UUID present
+            if target in labs:
+                return target
+            # Need to inspect each lab for its name
+            lower = target.lower()
+            for uuid in labs:
+                try:
+                    info = self.lab_info(uuid)
+                    nm = None
+                    if isinstance(info, dict):
+                        nm = (
+                            info.get("title")
+                            or info.get("lab_title")
+                            or info.get("label")
+                            or info.get("name")
+                        )
+                    if isinstance(nm, str) and nm.strip().lower() == lower:
+                        return uuid
+                except Exception:
+                    continue
+        return None
+
     # Utilities for uploads
     @staticmethod
     def extract_uuids_from_response(obj) -> set[str]:

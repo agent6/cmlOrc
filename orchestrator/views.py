@@ -22,6 +22,7 @@ from .services import (
     release_server,
     check_and_release_expired_leases,
     push_lab_yaml_to_server,
+    probe_health,
 )
 from .cml import CMLClient
 
@@ -37,8 +38,22 @@ def server_add(request):
     if request.method == "POST":
         form = CMLServerForm(request.POST)
         if form.is_valid():
-            form.save()
-            messages.success(request, "Server added.")
+            server = form.save()
+            # Do an immediate health probe to avoid waiting for the worker
+            try:
+                from .services import probe_health
+                ok = probe_health(server)
+                from django.utils import timezone
+                server.last_health_at = timezone.now()
+                server.last_health_ok = bool(ok)
+                if ok and not server.assigned_to:
+                    server.status = server.STATUS_AVAILABLE
+                elif not ok:
+                    server.status = server.STATUS_UNAVAILABLE
+                server.save(update_fields=["last_health_ok", "last_health_at", "status"])
+            except Exception:
+                pass
+            messages.success(request, "Server added and probed.")
             return redirect("orchestrator:home")
     else:
         form = CMLServerForm()
@@ -84,8 +99,21 @@ def server_clone(request, pk: int):
     if request.method == "POST":
         form = CMLServerForm(request.POST)
         if form.is_valid():
-            form.save()
-            messages.success(request, f"Cloned from {src.name}.")
+            server = form.save()
+            try:
+                from .services import probe_health
+                ok = probe_health(server)
+                from django.utils import timezone
+                server.last_health_at = timezone.now()
+                server.last_health_ok = bool(ok)
+                if ok and not server.assigned_to:
+                    server.status = server.STATUS_AVAILABLE
+                elif not ok:
+                    server.status = server.STATUS_UNAVAILABLE
+                server.save(update_fields=["last_health_ok", "last_health_at", "status"])
+            except Exception:
+                pass
+            messages.success(request, f"Cloned from {src.name} and probed.")
             return redirect("orchestrator:home")
     else:
         initial = {
@@ -105,8 +133,27 @@ def server_test(request, pk: int):
         c = CMLClient(server.base_url, server.username, server.password, verify_tls=server.verify_tls)
         token = c.authenticate()
         labs = c.list_labs()
-        messages.success(request, f"Connection OK. Token acquired. Labs response type: {type(labs).__name__}.")
+        # Also perform a health probe and update status/health
+        ok = probe_health(server)
+        if ok:
+            from django.utils import timezone
+            server.last_health_ok = True
+            server.last_health_at = timezone.now()
+            if server.assigned_to:
+                server.status = server.STATUS_IN_USE
+            else:
+                server.status = server.STATUS_AVAILABLE
+            server.save(update_fields=["last_health_ok", "last_health_at", "status"])
+            messages.success(request, f"Connection OK and health OK. Labs response type: {type(labs).__name__}.")
+        else:
+            server.mark_unavailable()
+            messages.warning(request, "Connection OK but health probe failed; marked Unavailable.")
     except Exception as e:
+        # Mark unavailable on test failure
+        try:
+            server.mark_unavailable()
+        except Exception:
+            pass
         messages.error(request, f"Connection failed: {e}")
     return redirect("orchestrator:home")
 
@@ -142,6 +189,17 @@ def server_release(request, pk: int):
         messages.success(request, f"Released {server.name} and scheduled cleanup.")
         return redirect("orchestrator:home")
     return render(request, "orchestrator/release_confirm.html", {"server": server})
+
+
+@login_required
+def server_delete(request, pk: int):
+    server = get_object_or_404(CMLServer, pk=pk)
+    if request.method == "POST":
+        name = server.name
+        server.delete()
+        messages.success(request, f"Deleted server {name}.")
+        return redirect("orchestrator:home")
+    return render(request, "orchestrator/server_delete_confirm.html", {"server": server})
 
 
 @login_required

@@ -20,11 +20,24 @@
     </nav>
     <main class="container mt-4">
       {% for message in messages %}
-      <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+      <div class="alert alert-{{ message.tags }} fade show" role="alert">{{ message }}</div>
       {% endfor %}
       {% block content %}{% endblock %}
     </main>
   </body>
   <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <script>
+    // Auto-dismiss flash messages after 10 seconds with a fade-out
+    (function() {
+      const alerts = document.querySelectorAll('.alert');
+      alerts.forEach(function(el) {
+        setTimeout(function() {
+          try {
+            el.classList.remove('show'); // triggers fade-out because 'fade' class is present
+            setTimeout(function(){ el.remove(); }, 600); // remove after transition
+          } catch (e) {}
+        }, 10000); // 10 seconds
+      });
+    })();
+  </script>
 </html>
-

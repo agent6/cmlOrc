@@ -1,0 +1,14 @@
+{% extends "orchestrator/base.html" %}
+{% block content %}
+  <h2>Delete {{ server.name }}</h2>
+  <p>This will permanently remove the server from the pool. It does not contact the CML controller.</p>
+  {% if server.assigned_to %}
+    <div class="alert alert-warning">This server is currently assigned to {{ server.assigned_to.username }}. Consider releasing it first.</div>
+  {% endif %}
+  <form method="post">
+    {% csrf_token %}
+    <button class="btn btn-danger" type="submit">Confirm Delete</button>
+    <a class="btn btn-secondary" href="{% url 'orchestrator:home' %}">Cancel</a>
+  </form>
+{% endblock %}
+
