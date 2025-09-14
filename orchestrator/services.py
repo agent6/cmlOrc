@@ -91,9 +91,33 @@ def ensure_only_lab_running_and_wiped_then_start(server: CMLServer, lab_uuid: st
 
 
 def assign_server_to_student_by_name(server: CMLServer, user, lab_name_or_uuid: str, minutes: int = 240):
+    """Assign user to a lab on this server.
+    If the same user re-assigns to the same lab currently on this server,
+    only extend the lease time and avoid stopping/wiping/restarting labs.
+    """
     c = _client(server)
     c.authenticate()
-    lab_uuid = lab_name_or_uuid  # Name->UUID resolution omitted for brevity here
+    lab_uuid = lab_name_or_uuid  # Name->UUID resolution omitted in this variant
+
+    # If same user + same lab, extend lease only
+    same_user = server.assigned_to_id == getattr(user, "id", None)
+    same_lab = False
+    try:
+        if server.assigned_lab_uuid and server.assigned_lab_uuid == lab_uuid:
+            same_lab = True
+        elif server.assigned_lab_name and lab_name_or_uuid and server.assigned_lab_name.strip().lower() == lab_name_or_uuid.strip().lower():
+            same_lab = True
+    except Exception:
+        same_lab = False
+
+    if same_user and same_lab:
+        with transaction.atomic():
+            now = timezone.now()
+            server.assigned_until = now + timezone.timedelta(minutes=minutes)
+            server.save(update_fields=["assigned_until"])
+        return
+
+    # Otherwise, perform full assignment and lab preparation
     with transaction.atomic():
         server.assign(user, lab_uuid, minutes=minutes, lab_name=lab_name_or_uuid)
     ensure_only_lab_running_and_wiped_then_start(server, lab_uuid)
@@ -199,3 +223,68 @@ def check_and_release_expired_leases():
         except Exception:
             logger.exception("Lease sweeper: error releasing %s", s.name)
 
+
+def push_lab_yaml_to_server(server: CMLServer, yaml_text: str):
+    try:
+        c = _client(server, timeout=getattr(settings, "IMPORT_HTTP_TIMEOUT", 8))
+        title = CMLClient.extract_lab_title_from_yaml(yaml_text)
+        removed = 0
+        # Pre-import duplicate cleanup if we know the title
+        if title:
+            try:
+                labs = c.list_labs()
+                if isinstance(labs, dict):
+                    items = list(labs.items())  # (uuid, name)
+                    matches = [u for u, nm in items if isinstance(nm, str) and nm.strip().lower() == title.lower()]
+                elif isinstance(labs, list):
+                    # need to fetch names
+                    matches = []
+                    for u in labs:
+                        try:
+                            info = c.lab_info(u)
+                            nm = None
+                            if isinstance(info, dict):
+                                nm = (
+                                    info.get("title")
+                                    or info.get("lab_title")
+                                    or info.get("label")
+                                    or info.get("name")
+                                )
+                            if isinstance(nm, str) and nm.strip().lower() == title.lower():
+                                matches.append(u)
+                        except Exception:
+                            continue
+                else:
+                    matches = []
+                for u in matches:
+                    try:
+                        c.stop_lab(u)
+                    except Exception:
+                        pass
+                    try:
+                        c.wait_for_lab_not_running(u, timeout=120)
+                    except Exception:
+                        pass
+                    try:
+                        c.wipe_lab(u)
+                    except Exception:
+                        pass
+                    try:
+                        c.delete_lab(u)
+                        removed += 1
+                    except Exception:
+                        # continue even if delete fails
+                        pass
+            except Exception:
+                # If listing fails, continue to import anyway
+                pass
+
+        resp = c.import_lab_yaml(yaml_text)
+        return {"ok": True, "response": resp, "title": title, "removed": removed}
+    except Exception as e:
+        title = None
+        try:
+            title = CMLClient.extract_lab_title_from_yaml(yaml_text)
+        except Exception:
+            pass
+        return {"ok": False, "error": str(e), "title": title, "removed": 0}

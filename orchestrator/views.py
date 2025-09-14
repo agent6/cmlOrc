@@ -2,6 +2,16 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse, HttpResponse
+import json
+import socket
+from urllib.parse import urlsplit
+import ipaddress
+from django.http import JsonResponse, HttpResponse
+import json
+import socket
+from urllib.parse import urlsplit
+import ipaddress
 import uuid
 
 from .models import CMLServer, HealthSettings
@@ -11,6 +21,7 @@ from .services import (
     assign_via_pool,
     release_server,
     check_and_release_expired_leases,
+    push_lab_yaml_to_server,
 )
 from .cml import CMLClient
 
@@ -159,12 +170,17 @@ def labs_upload_item(request, pk: int):
         yaml_text = request.session.get(f"lab_upload:{token}")
     if not yaml_text:
         return render(request, "orchestrator/partials/upload_row.html", {"server": server, "status": "error", "message": "Upload token missing/expired."})
-    try:
-        # Minimal push: reuse services if available (omitted here for brevity)
-        messages = "Uploaded"
-        return render(request, "orchestrator/partials/upload_row.html", {"server": server, "status": "ok", "message": messages, "log": []})
-    except Exception as e:
-        return render(request, "orchestrator/partials/upload_row.html", {"server": server, "status": "error", "message": str(e)})
+    result = push_lab_yaml_to_server(server, yaml_text)
+    title = result.get("title") or "(unknown title)"
+    if result.get("ok"):
+        removed = result.get("removed") or 0
+        msg = f"Uploaded lab '{title}'"
+        if removed:
+            msg += f"; removed {removed} duplicate(s)"
+        return render(request, "orchestrator/partials/upload_row.html", {"server": server, "status": "ok", "message": msg, "log": []})
+    else:
+        msg = result.get("error") or "Upload failed"
+        return render(request, "orchestrator/partials/upload_row.html", {"server": server, "status": "error", "message": f"{msg} (lab '{title}')"})
 
 
 @login_required
@@ -207,3 +223,208 @@ def health_settings(request):
 def server_row(request, pk: int):
     server = get_object_or_404(CMLServer, pk=pk)
     return render(request, "orchestrator/partials/server_row.html", {"s": server})
+
+
+@csrf_exempt
+def api_assign(request):
+    """API: Assign a user to a lab via the pool and return server IP.
+    Request: POST JSON or form-encoded with keys: username (or user), lab (or lab_name), optional minutes
+    Response: 200 text/plain body with the server IP, or JSON error with status 4xx/5xx.
+    """
+    if request.method != "POST":
+        return JsonResponse({"error": "POST required"}, status=405)
+
+    # Parse payload
+    data = {}
+    ctype = (request.content_type or "").lower()
+    if "application/json" in ctype:
+        try:
+            data = json.loads(request.body.decode() or "{}")
+        except Exception:
+            return JsonResponse({"error": "Invalid JSON"}, status=400)
+    else:
+        data = request.POST
+
+    username = (data.get("username") or data.get("user") or "").strip()
+    lab = (data.get("lab") or data.get("lab_name") or "").strip()
+    minutes_raw = data.get("minutes")
+    try:
+        minutes = int(minutes_raw) if minutes_raw is not None else 240
+    except Exception:
+        return JsonResponse({"error": "Invalid minutes"}, status=400)
+
+    if not username:
+        return JsonResponse({"error": "Missing 'username'"}, status=400)
+    if not lab:
+        return JsonResponse({"error": "Missing 'lab'"}, status=400)
+
+    # Get or create user
+    try:
+        from django.contrib.auth import get_user_model
+
+        User = get_user_model()
+        user, created = User.objects.get_or_create(
+            username=username,
+            defaults={"is_staff": False, "is_superuser": False},
+        )
+        if created:
+            user.set_unusable_password()
+            user.save(update_fields=["password"])
+    except Exception as e:
+        return JsonResponse({"error": f"User error: {e}"}, status=400)
+
+    # Assign via pool
+    try:
+        server = assign_via_pool(user, lab, minutes=minutes)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
+
+    # Resolve IP from server.base_url
+    try:
+        host = urlsplit(server.base_url).hostname or ""
+        ip_str = None
+        if host:
+            try:
+                ipaddress.ip_address(host)  # already an IP
+                ip_str = host
+            except ValueError:
+                infos = socket.getaddrinfo(host, None)
+                # Prefer IPv4
+                for fam, _, _, _, sockaddr in infos:
+                    if fam == socket.AF_INET:
+                        ip_str = sockaddr[0]
+                        break
+                if not ip_str and infos:
+                    ip_str = infos[0][4][0]
+        if not ip_str:
+            return JsonResponse({"error": "Unable to resolve server IP"}, status=502)
+        return HttpResponse(ip_str, content_type="text/plain")
+    except Exception as e:
+        return JsonResponse({"error": f"IP resolution failed: {e}"}, status=502)
+
+
+@csrf_exempt
+def api_release(request):
+    """API: Release a user's CML assignment.
+    Request: POST JSON or form with key: username (or user)
+    Response: 200 text/plain: "OK" if released, "NONE" if no assignment; JSON error on failure.
+    """
+    if request.method != "POST":
+        return JsonResponse({"error": "POST required"}, status=405)
+
+    # Parse payload
+    data = {}
+    ctype = (request.content_type or "").lower()
+    if "application/json" in ctype:
+        try:
+            data = json.loads(request.body.decode() or "{}")
+        except Exception:
+            return JsonResponse({"error": "Invalid JSON"}, status=400)
+    else:
+        data = request.POST
+
+    username = (data.get("username") or data.get("user") or "").strip()
+    if not username:
+        return JsonResponse({"error": "Missing 'username'"}, status=400)
+
+    # Resolve user
+    try:
+        from django.contrib.auth import get_user_model
+
+        User = get_user_model()
+        try:
+            user = User.objects.get(username=username)
+        except User.DoesNotExist:
+            return JsonResponse({"error": "User not found"}, status=404)
+    except Exception as e:
+        return JsonResponse({"error": f"User error: {e}"}, status=400)
+
+    # Find and release assignment
+    from .services import get_user_assignment
+
+    server = get_user_assignment(user)
+    if not server:
+        return HttpResponse("NONE", content_type="text/plain")
+    try:
+        release_server(server)
+        return HttpResponse("OK", content_type="text/plain")
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
+
+
+@csrf_exempt
+def api_assign(request):
+    """API: Assign a user to a lab via the pool and return server IP.
+    Request: POST JSON or form-encoded with keys: username (or user), lab (or lab_name), optional minutes
+    Response: 200 text/plain body with the server IP, or JSON error with status 4xx/5xx.
+    """
+    if request.method != "POST":
+        return JsonResponse({"error": "POST required"}, status=405)
+
+    # Parse payload
+    data = {}
+    ctype = (request.content_type or "").lower()
+    if "application/json" in ctype:
+        try:
+            data = json.loads(request.body.decode() or "{}")
+        except Exception:
+            return JsonResponse({"error": "Invalid JSON"}, status=400)
+    else:
+        data = request.POST
+
+    username = (data.get("username") or data.get("user") or "").strip()
+    lab = (data.get("lab") or data.get("lab_name") or "").strip()
+    minutes_raw = data.get("minutes")
+    try:
+        minutes = int(minutes_raw) if minutes_raw is not None else 240
+    except Exception:
+        return JsonResponse({"error": "Invalid minutes"}, status=400)
+
+    if not username:
+        return JsonResponse({"error": "Missing 'username'"}, status=400)
+    if not lab:
+        return JsonResponse({"error": "Missing 'lab'"}, status=400)
+
+    # Get or create user
+    try:
+        from django.contrib.auth import get_user_model
+
+        User = get_user_model()
+        user, created = User.objects.get_or_create(
+            username=username,
+            defaults={"is_staff": False, "is_superuser": False},
+        )
+        if created:
+            user.set_unusable_password()
+            user.save(update_fields=["password"])
+    except Exception as e:
+        return JsonResponse({"error": f"User error: {e}"}, status=400)
+
+    # Assign via pool
+    try:
+        server = assign_via_pool(user, lab, minutes=minutes)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
+
+    # Resolve IP from server.base_url
+    try:
+        host = urlsplit(server.base_url).hostname or ""
+        ip_str = None
+        if host:
+            try:
+                ipaddress.ip_address(host)  # already an IP
+                ip_str = host
+            except ValueError:
+                infos = socket.getaddrinfo(host, None)
+                # Prefer IPv4
+                for fam, _, _, _, sockaddr in infos:
+                    if fam == socket.AF_INET:
+                        ip_str = sockaddr[0]
+                        break
+                if not ip_str and infos:
+                    ip_str = infos[0][4][0]
+        if not ip_str:
+            return JsonResponse({"error": "Unable to resolve server IP"}, status=502)
+        return HttpResponse(ip_str, content_type="text/plain")
+    except Exception as e:
+        return JsonResponse({"error": f"IP resolution failed: {e}"}, status=502)

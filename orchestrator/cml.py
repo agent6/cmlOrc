@@ -123,6 +123,15 @@ class CMLClient:
                 return self._request("POST", f"/labs/{lab_uuid}/wipe")
             raise
 
+    def delete_lab(self, lab_uuid: str):
+        """Delete a lab via DELETE, with legacy POST fallback."""
+        try:
+            return self._request("DELETE", f"/labs/{lab_uuid}")
+        except urllib.error.HTTPError as e:
+            if e.code in (400, 405):
+                return self._request("POST", f"/labs/{lab_uuid}/delete")
+            raise
+
     # State helpers
     def lab_state(self, lab_uuid: str) -> Optional[str]:
         try:
@@ -165,6 +174,132 @@ class CMLClient:
                 continue
         return False
 
+    def import_lab_yaml(self, yaml_text: str):
+        """Import/Create a lab from YAML on this controller.
+        Tries multiple endpoints and content types for compatibility.
+        Returns parsed JSON if available, else response text.
+        Raises the last HTTP/URL error if all attempts fail.
+        """
+        token = self._token or self.authenticate()
+
+        def parse_response(resp):
+            raw = resp.read()
+            ctype = resp.headers.get("Content-Type", "")
+            if ctype.startswith("application/json"):
+                return json.loads(raw.decode() or "{}")
+            return raw.decode()
+
+        def send_path(path: str, content_type: str, body: bytes):
+            url = f"{self.base_url}{path}"
+            headers = {"Content-Type": content_type, "Authorization": f"Bearer {token}"}
+            req = urllib.request.Request(url, data=body, headers=headers, method="POST")
+            with urllib.request.urlopen(req, timeout=self.timeout, context=self._ctx) as resp:
+                return parse_response(resp)
+
+        def send_json(path: str, obj: dict):
+            return self._request("POST", path, data=obj)
+
+        def send_multipart(path: str, field_name: str, filename: str, content_type: str, content: bytes):
+            boundary = f"----cmlorc-{os.urandom(8).hex()}"
+            parts = []
+            parts.append(f"--{boundary}\r\n".encode())
+            parts.append(
+                (
+                    f"Content-Disposition: form-data; name=\"{field_name}\"; filename=\"{filename}\"\r\n"
+                    f"Content-Type: {content_type}\r\n\r\n"
+                ).encode()
+            )
+            parts.append(content)
+            parts.append(b"\r\n")
+            parts.append(f"--{boundary}--\r\n".encode())
+            body = b"".join(parts)
+            url = f"{self.base_url}{path}"
+            headers = {
+                "Content-Type": f"multipart/form-data; boundary={boundary}",
+                "Authorization": f"Bearer {token}",
+            }
+            req = urllib.request.Request(url, data=body, headers=headers, method="POST")
+            with urllib.request.urlopen(req, timeout=self.timeout, context=self._ctx) as resp:
+                return parse_response(resp)
+
+        yaml_bytes = (yaml_text or "").encode()
+        last_err = None
+        endpoints = ["/labs", "/labs/import", "/import"]
+        for path in endpoints:
+            try:
+                return send_path(path, "text/plain", yaml_bytes)
+            except Exception as e:
+                last_err = e
+            try:
+                return send_path(path, "application/x-yaml", yaml_bytes)
+            except Exception as e:
+                last_err = e
+            try:
+                return send_json(path, {"yaml": yaml_text})
+            except Exception as e:
+                last_err = e
+            for field in ("file", "upload", "lab", "topology"):
+                for fname in ("lab.yaml", "topology.yaml"):
+                    for ctype in ("application/x-yaml", "text/plain"):
+                        try:
+                            return send_multipart(path, field, fname, ctype, yaml_bytes)
+                        except Exception as e:
+                            last_err = e
+                            continue
+        if last_err:
+            raise last_err
+        raise RuntimeError("Import failed: no attempts made")
+
+    @staticmethod
+    def extract_lab_title_from_yaml(yaml_text: str) -> Optional[str]:
+        """Extract the lab title from a CML lab YAML.
+        Prefers lab.title (or lab.lab_title/name). Avoids node label fields.
+        """
+        text = yaml_text or ""
+        # Try PyYAML if available for robust parsing
+        try:
+            import yaml  # type: ignore
+
+            data = yaml.safe_load(text)
+            if isinstance(data, dict):
+                lab = data.get("lab")
+                if isinstance(lab, dict):
+                    for k in ("title", "lab_title", "name"):
+                        v = lab.get(k)
+                        if isinstance(v, str) and v.strip():
+                            return v.strip()
+                # fallback: top-level keys if lab block missing
+                for k in ("title", "lab_title", "name"):
+                    v = data.get(k)
+                    if isinstance(v, str) and v.strip():
+                        return v.strip()
+        except Exception:
+            pass
+        # Regex fallback: locate 'lab:' block then read its title/name lines
+        import re
+
+        lines = text.splitlines()
+        lab_idx = None
+        for i, line in enumerate(lines[:500]):
+            if re.match(r"^\s*lab\s*:\s*$", line):
+                lab_idx = i
+                break
+        if lab_idx is not None:
+            for line in lines[lab_idx + 1 : lab_idx + 80]:
+                m = re.match(r"^\s*(title|lab_title|name)\s*:\s*['\"]?(?P<val>[^'\"]+?)['\"]?\s*$", line)
+                if m:
+                    val = m.group("val").strip()
+                    if val:
+                        return val
+        # As last resort: first title-like key in the file (avoid 'label')
+        for line in lines[:500]:
+            m = re.match(r"^\s*(title|lab_title|name)\s*:\s*['\"]?(?P<val>[^'\"]+?)['\"]?\s*$", line)
+            if m:
+                val = m.group("val").strip()
+                if val:
+                    return val
+        return None
+
     # Utilities for uploads
     @staticmethod
     def extract_uuids_from_response(obj) -> set[str]:
@@ -183,4 +318,3 @@ class CMLClient:
         except Exception:
             pass
         return uuids
-

@@ -9,6 +9,10 @@ urlpatterns = [
     path("settings/health/", views.health_settings, name="health_settings"),
     path("labs/upload/", views.labs_upload, name="labs_upload"),
     path("labs/upload/item/<int:pk>/", views.labs_upload_item, name="labs_upload_item"),
+    # Simple API endpoint to assign a user to a lab and return server IP
+    path("api/assign/", views.api_assign, name="api_assign"),
+    # Simple API endpoint to release a user's assignment
+    path("api/release/", views.api_release, name="api_release"),
     path("assign/", views.pool_assign, name="pool_assign"),
     path("servers/add/", views.server_add, name="server_add"),
     path("servers/<int:pk>/edit/", views.server_edit, name="server_edit"),
@@ -18,4 +22,3 @@ urlpatterns = [
     path("servers/<int:pk>/assign/", views.server_assign, name="server_assign"),
     path("servers/<int:pk>/release/", views.server_release, name="server_release"),
 ]
-
