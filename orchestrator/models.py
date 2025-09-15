@@ -51,7 +51,7 @@ class CMLServer(models.Model):
         self.last_health_at = timezone.now()
         self.save(update_fields=["last_health_ok", "status", "last_health_at"])
 
-    def assign(self, user, lab_uuid: str, minutes: int = 240, lab_name: Optional[str] = None):
+    def assign(self, user, lab_uuid: str, minutes: int = 60, lab_name: Optional[str] = None):
         now = timezone.now()
         self.assigned_to = user
         self.assigned_lab_uuid = lab_uuid

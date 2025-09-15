@@ -41,7 +41,7 @@ class CMLServerForm(forms.ModelForm):
 class AssignmentForm(forms.Form):
     user = forms.ModelChoiceField(queryset=User.objects.order_by("username"))
     lab_name = forms.CharField(max_length=255, help_text="Lab name (or UUID)")
-    minutes = forms.IntegerField(min_value=1, max_value=1440, initial=240, help_text="Lease duration in minutes")
+    minutes = forms.IntegerField(min_value=1, max_value=1440, initial=60, help_text="Lease duration in minutes")
 
 
 class LabUploadForm(forms.Form):

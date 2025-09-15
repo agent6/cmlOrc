@@ -8,7 +8,7 @@ The API is intentionally minimal and designed to be fronted by your own auth or 
 - Params:
   - `username` or `user`: required
   - `lab` or `lab_name`: required (CML lab title or UUID)
-  - `minutes`: optional integer, default 240
+  - `minutes`: optional integer, default 60
 - Behavior:
   - User is created if missing (non-staff, unusable password).
   - Uses pool assignment (reuse existing assignment; otherwise first healthy available).
@@ -28,7 +28,7 @@ JSON:
 ```
 curl -sS -X POST http://localhost:8005/api/assign/ \
   -H 'Content-Type: application/json' \
-  -d '{"username":"student05","lab":"Lab1","minutes":120}'
+  -d '{"username":"student05","lab":"Lab1","minutes":60}'
 ```
 
 ## Release User Assignment
@@ -46,4 +46,3 @@ curl -sS -X POST http://localhost:8005/api/release/ -d 'user=student05'
 ```
 
 Security: These endpoints are unauthenticated by default. Protect with network rules, a reverse proxy, or extend them to require auth tokens.
-

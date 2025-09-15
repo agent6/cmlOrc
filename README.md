@@ -32,7 +32,7 @@ Notes:
 - Parameters:
   - `username` or `user`: username to assign
   - `lab` or `lab_name`: target lab name or UUID
-  - `minutes` (optional): lease duration in minutes (default 240)
+  - `minutes` (optional): lease duration in minutes (default 60)
 - Behavior:
   - Creates the user if they do not exist (non-staff, unusable password).
   - Assigns via the pool (reuses current assignment or picks the first healthy available server).
@@ -54,7 +54,7 @@ JSON:
 ```
 curl -sS -X POST http://localhost:8005/api/assign/ \
   -H 'Content-Type: application/json' \
-  -d '{"username":"student05","lab":"Lab1","minutes":120}'
+  -d '{"username":"student05","lab":"Lab1","minutes":60}'
 ```
 
 ### Release User Assignment

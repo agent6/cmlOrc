@@ -110,7 +110,7 @@ def ensure_only_lab_running_and_wiped_then_start(server: CMLServer, lab_uuid: st
             raise
 
 
-def assign_server_to_student_by_name(server: CMLServer, user, lab_name_or_uuid: str, minutes: int = 240):
+def assign_server_to_student_by_name(server: CMLServer, user, lab_name_or_uuid: str, minutes: int = 60):
     """Assign user to a lab on this server.
     If the same user re-assigns to the same lab currently on this server,
     only extend the lease time and avoid stopping/wiping/restarting labs.
@@ -160,7 +160,7 @@ def find_first_available_server() -> CMLServer | None:
     return qs.first()
 
 
-def assign_via_pool(user, lab_name_or_uuid: str, minutes: int = 240) -> CMLServer:
+def assign_via_pool(user, lab_name_or_uuid: str, minutes: int = 60) -> CMLServer:
     current = get_user_assignment(user)
     target_server = current or find_first_available_server()
     if not target_server:

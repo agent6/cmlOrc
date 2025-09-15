@@ -483,7 +483,7 @@ def api_assign(request):
     lab = (data.get("lab") or data.get("lab_name") or "").strip()
     minutes_raw = data.get("minutes")
     try:
-        minutes = int(minutes_raw) if minutes_raw is not None else 240
+        minutes = int(minutes_raw) if minutes_raw is not None else 60
     except Exception:
         return JsonResponse({"error": "Invalid minutes"}, status=400)
 
@@ -610,7 +610,7 @@ def api_assign(request):
     lab = (data.get("lab") or data.get("lab_name") or "").strip()
     minutes_raw = data.get("minutes")
     try:
-        minutes = int(minutes_raw) if minutes_raw is not None else 240
+        minutes = int(minutes_raw) if minutes_raw is not None else 60
     except Exception:
         return JsonResponse({"error": "Invalid minutes"}, status=400)
 
