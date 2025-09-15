@@ -4,6 +4,14 @@ Minimal Django app to orchestrate a pool of Cisco CML servers for students.
 
 Documentation: docs/README.md
 
+## Get The Code
+
+- Clone the repo:
+  - `git clone https://github.com/agent6/cmlOrc.git`
+  - `cd cmlOrc`
+- To update later:
+  - `git pull`
+
 ## Run The Server
 
 Development:

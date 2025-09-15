@@ -1,5 +1,13 @@
 # Setup
 
+# Setup
+
+## Get the code
+
+- Clone the repo and enter the project directory:
+  - `git clone https://github.com/agent6/cmlOrc.git`
+  - `cd cmlOrc`
+
 Prerequisites:
 - Python 3.11+
 - pip and virtualenv recommended
@@ -22,3 +30,8 @@ Steps:
 Notes:
 - This project includes a tiny `.env` loader (`cmlorc/env.py`). If a `.env` exists in the repo root, it will be loaded automatically by `manage.py` and `wsgi.py`.
 - SQLite is used by default. For production, consider configuring Postgres and updating `DATABASES` in `cmlorc/settings.py`.
+
+## Updating to the latest version
+
+- Pull changes from the remote:
+  - `git pull`
