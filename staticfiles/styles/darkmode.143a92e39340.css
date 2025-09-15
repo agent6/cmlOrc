@@ -120,9 +120,6 @@ body { min-height: 100vh; }
 .border, .form-control, .form-select, .card { border-color: var(--fw-border) !important; }
 .form-control, .form-select { background: var(--fw-surface) !important; }
 .form-control:disabled, .form-control[readonly], .form-select:disabled { background: var(--clr-dn-20) !important; color: var(--fw-text-muted) !important; }
-.form-label, .form-check-label, label { color: var(--fw-text) !important; }
-.form-text { color: var(--fw-text-muted) !important; }
-.form-control::placeholder { color: var(--fw-text-muted) !important; opacity: 1; }
 
 .btn-primary, .btn-outline-primary {
   background: var(--clr-brand-accent) !important; border-color: var(--clr-brand-accent) !important; color: #171723 !important; font-weight: 700; box-shadow: 0 2px 8px rgba(202,159,67,0.08); transition: all .12s;

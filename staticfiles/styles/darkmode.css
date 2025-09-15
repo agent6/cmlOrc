@@ -112,12 +112,17 @@ body { min-height: 100vh; }
   background: var(--fw-surface-soft) !important; border-bottom: 2px solid var(--fw-border); box-shadow: 0 4px 24px rgba(0,0,0,0.09);
 }
 .navbar .navbar-brand { color: var(--fw-text) !important; font-weight: 800; letter-spacing: -1px; font-size: 1.6rem; }
+.navbar .navbar-text, .navbar .nav-link, .navbar a { color: var(--fw-text) !important; }
+.navbar .nav-link:hover, .navbar a:hover { color: var(--clr-brand-accent-hi) !important; }
 .navbar .btn { margin-left: .5rem; }
 
 .bg-light { background: var(--fw-bg-soft) !important; }
 .border, .form-control, .form-select, .card { border-color: var(--fw-border) !important; }
 .form-control, .form-select { background: var(--fw-surface) !important; }
 .form-control:disabled, .form-control[readonly], .form-select:disabled { background: var(--clr-dn-20) !important; color: var(--fw-text-muted) !important; }
+.form-label, .form-check-label, label { color: var(--fw-text) !important; }
+.form-text { color: var(--fw-text-muted) !important; }
+.form-control::placeholder { color: var(--fw-text-muted) !important; opacity: 1; }
 
 .btn-primary, .btn-outline-primary {
   background: var(--clr-brand-accent) !important; border-color: var(--clr-brand-accent) !important; color: #171723 !important; font-weight: 700; box-shadow: 0 2px 8px rgba(202,159,67,0.08); transition: all .12s;
@@ -130,6 +135,8 @@ body { min-height: 100vh; }
 .btn-secondary, .btn-outline-secondary { background: var(--clr-dn-30) !important; color: var(--fw-text) !important; }
 
 .text-muted { color: var(--fw-text-muted) !important; }
+.text-dark { color: var(--fw-text) !important; }
+.h1 small, .h2 small, .h3 small, .h4 small, .h5 small, .h6 small { color: var(--fw-text-muted) !important; }
 .fw-bold { font-weight: bold; }
 
 ::-webkit-scrollbar { width: 10px; background: var(--clr-dn-80); }
@@ -138,6 +145,13 @@ body { min-height: 100vh; }
 
 a, .btn-link { color: var(--clr-brand-accent-hi); }
 a:hover, .btn-link:hover { color: var(--clr-brand-accent); }
+
+/* Alerts: improve readability on dark theme */
+.alert, .alert-primary, .alert-secondary, .alert-success, .alert-info, .alert-warning, .alert-danger, .alert-light, .alert-dark {
+  background: var(--fw-surface-soft) !important;
+  color: var(--fw-text) !important;
+  border-color: var(--fw-border) !important;
+}
 
 .hero {
   padding: 64px 0 48px; background: var(--fw-surface-soft); color: var(--fw-text); border-radius: 14px; box-shadow: 0 6px 32px rgba(0,0,0,0.17); max-width: 940px; margin: 0 auto 2.3rem; text-align: center;
@@ -177,11 +191,14 @@ footer { color: var(--fw-text-muted) !important; font-size: 1.02rem; margin-top:
 .table { color: var(--fw-text) !important; border-color: var(--fw-border) !important; }
 .table > :not(caption) > * > * { background-color: var(--fw-surface) !important; border-color: var(--fw-border) !important; }
 .table thead th { background: var(--fw-surface-soft) !important; color: var(--fw-text) !important; border-bottom: 2px solid var(--fw-border) !important; }
+.table td, .table th { color: var(--fw-text) !important; }
+.table td a, .table th a { color: var(--clr-brand-accent-hi) !important; }
+.table td .text-muted, .table th .text-muted { color: var(--fw-text-muted) !important; }
 .table-hover tbody tr:hover { background: var(--fw-surface-soft) !important; }
 
 /* Badges mapped to theme */
-.badge.bg-success { background: var(--clr-brand-accent-hi) !important; color: #171723 !important; }
-.badge.bg-warning { background: var(--clr-brand-accent) !important; color: #171723 !important; }
+.badge.bg-success { background: var(--clr-brand-accent-hi) !important; color: var(--fw-text) !important; }
+.badge.bg-warning { background: var(--clr-brand-accent) !important; color: var(--fw-text) !important; }
 .badge.bg-secondary { background: var(--clr-dn-30) !important; color: var(--fw-text) !important; }
 .badge.bg-info { background: var(--fw-surface-soft) !important; color: var(--fw-text) !important; }
 

@@ -5,8 +5,8 @@
   <td>
     <span class="badge 
       {% if s.status == 'available' %}bg-success
-      {% elif s.status == 'in_use' %}bg-warning text-dark
-      {% elif s.status == 'initializing' %}bg-info text-dark
+      {% elif s.status == 'in_use' %}bg-warning
+      {% elif s.status == 'initializing' %}bg-info
       {% else %}bg-secondary
       {% endif %}">
       {{ s.get_status_display }}
