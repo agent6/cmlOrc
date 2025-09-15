@@ -16,7 +16,7 @@ Development:
 
 Production (example):
 - `python -m pip install gunicorn`
-- `python manage.py collectstatic --no-input`
+- `python manage.py collectstatic --noinput`
 - `gunicorn cmlorc.wsgi:application --workers 5 --bind 0.0.0.0:8005 --log-level info`
 
 Notes:

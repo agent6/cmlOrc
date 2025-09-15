@@ -16,10 +16,9 @@ Steps:
   - `python manage.py runserver 0.0.0.0:8005`
 - Production (example):
   - `python -m pip install gunicorn`
-  - `python manage.py collectstatic --no-input`
+  - `python manage.py collectstatic --noinput`
   - `gunicorn cmlorc.wsgi:application --workers 5 --bind 0.0.0.0:8005 --log-level info`
 
 Notes:
 - This project includes a tiny `.env` loader (`cmlorc/env.py`). If a `.env` exists in the repo root, it will be loaded automatically by `manage.py` and `wsgi.py`.
 - SQLite is used by default. For production, consider configuring Postgres and updating `DATABASES` in `cmlorc/settings.py`.
-
