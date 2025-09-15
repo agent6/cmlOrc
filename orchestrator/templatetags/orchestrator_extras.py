@@ -31,3 +31,27 @@ def time_left(assigned_until):
     delta = assigned_until - now
     return _format_timedelta(delta)
 
+
+@register.filter(name="add_class")
+def add_class(field, css):
+    """Add CSS class to a form field widget in templates."""
+    try:
+        return field.as_widget(attrs={**field.field.widget.attrs, "class": (field.field.widget.attrs.get("class", "") + " " + css).strip()})
+    except Exception:
+        return field
+
+
+@register.filter(name="add_attrs")
+def add_attrs(field, attrs_str):
+    """Add arbitrary attrs to a form field: 'placeholder=foo,style=color:red'"""
+    try:
+        attrs = {}
+        for part in attrs_str.split(","):
+            if not part.strip():
+                continue
+            if "=" in part:
+                k, v = part.split("=", 1)
+                attrs[k.strip()] = v.strip()
+        return field.as_widget(attrs={**field.field.widget.attrs, **attrs})
+    except Exception:
+        return field

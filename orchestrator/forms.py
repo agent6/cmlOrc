@@ -71,4 +71,4 @@ class HealthSettingsForm(forms.Form):
     quick_retry_delay_sec = forms.IntegerField(min_value=1, max_value=60, label="Quick retry delay (sec)")
     backoff_base_sec = forms.IntegerField(min_value=1, max_value=3600, label="Backoff base (sec)")
     backoff_max_sec = forms.IntegerField(min_value=1, max_value=86400, label="Backoff max (sec)")
-
+    stats_interval_sec = forms.IntegerField(min_value=5, max_value=86400, initial=60, label="Stats snapshot interval (sec)")

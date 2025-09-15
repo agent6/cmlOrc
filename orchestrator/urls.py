@@ -22,4 +22,6 @@ urlpatterns = [
     path("servers/<int:pk>/assign/", views.server_assign, name="server_assign"),
     path("servers/<int:pk>/release/", views.server_release, name="server_release"),
     path("servers/<int:pk>/delete/", views.server_delete, name="server_delete"),
+    path("pool/metrics/", views.pool_metrics, name="pool_metrics"),
+    path("pool/metrics/data/", views.pool_metrics_data, name="pool_metrics_data"),
 ]

@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from typing import Optional
+from django.db import connection
 
 
 User = get_user_model()
@@ -86,13 +87,40 @@ class HealthSettings(models.Model):
     quick_retry_delay_sec = models.PositiveIntegerField(default=5)
     backoff_base_sec = models.PositiveIntegerField(default=15)
     backoff_max_sec = models.PositiveIntegerField(default=300)
+    stats_interval_sec = models.PositiveIntegerField(default=60)
 
     @classmethod
     def get_solo(cls) -> "HealthSettings":
-        obj = cls.objects.first()
+        try:
+            obj = cls.objects.first()
+        except Exception:
+            # Attempt to add missing stats_interval_sec dynamically (dev convenience)
+            try:
+                with connection.schema_editor() as se:
+                    field = models.PositiveIntegerField(default=60)
+                    field.set_attributes_from_name("stats_interval_sec")
+                    se.add_field(cls, field)
+            except Exception:
+                pass
+            obj = cls.objects.first()
         if obj:
             return obj
         return cls.objects.create()
 
     def __str__(self):
         return "Health Settings"
+
+
+class PoolStat(models.Model):
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    total = models.PositiveIntegerField()
+    available = models.PositiveIntegerField()
+    in_use = models.PositiveIntegerField()
+    unavailable = models.PositiveIntegerField()
+    initializing = models.PositiveIntegerField()
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"PoolStat {self.created_at:%Y-%m-%d %H:%M:%S} avail={self.available}/{self.total}"

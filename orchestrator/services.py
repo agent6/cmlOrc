@@ -25,20 +25,40 @@ def _client(server: CMLServer, timeout: int | None = None) -> CMLClient:
 
 
 def probe_health(server: CMLServer) -> bool:
+    """Lightweight health probe.
+    Strategy:
+    1) If mode=ping, try unauthenticated ping first. If it fails, fall back to an authenticated list_labs() before declaring failure.
+    2) If mode=labs, call list_labs() (authenticated) directly.
+    Uses HealthSettings.http_timeout_sec for request timeout.
+    """
     try:
         hs = HealthSettings.get_solo()
-        timeout = hs.http_timeout_sec
-        c = _client(server, timeout=timeout)
-        if hs.mode == HealthSettings.MODE_PING:
-            return bool(c.ping())
+    except Exception:
+        hs = None
+    timeout = getattr(hs, "http_timeout_sec", 12)
+    c = _client(server, timeout=timeout)
+
+    try:
+        mode = getattr(hs, "mode", HealthSettings.MODE_PING if hs else "ping")
+        if mode == HealthSettings.MODE_PING:
+            # First try unauthenticated reachability
+            if c.ping():
+                return True
+            # Fallback: try an authenticated lightweight call before failing
+            try:
+                c.list_labs()
+                return True
+            except Exception as e:
+                logger.debug("Health probe (fallback list) failed for %s: %s", server.name, e)
+                return False
         else:
             c.list_labs()
             return True
     except urllib.error.URLError as e:
         logger.debug("Health probe network error for %s (%s): %s", server.name, server.base_url, e)
         return False
-    except Exception:
-        logger.debug("Health probe failed for %s (%s)", server.name, server.base_url)
+    except Exception as e:
+        logger.debug("Health probe failed for %s (%s): %s", server.name, server.base_url, e)
         return False
 
 
@@ -224,6 +244,33 @@ def check_and_release_expired_leases():
             release_server(s)
         except Exception:
             logger.exception("Lease sweeper: error releasing %s", s.name)
+
+
+def record_pool_snapshot():
+    try:
+        from .models import PoolStat
+        total = CMLServer.objects.count()
+        available = CMLServer.objects.filter(status=CMLServer.STATUS_AVAILABLE).count()
+        in_use = CMLServer.objects.filter(status=CMLServer.STATUS_IN_USE).count()
+        unavailable = CMLServer.objects.filter(status=CMLServer.STATUS_UNAVAILABLE).count()
+        initializing = CMLServer.objects.filter(status=CMLServer.STATUS_INITIALIZING).count()
+        PoolStat.objects.create(
+            total=total,
+            available=available,
+            in_use=in_use,
+            unavailable=unavailable,
+            initializing=initializing,
+        )
+    except Exception as e:
+        # If table doesn't exist yet, try to create it dynamically (dev convenience)
+        try:
+            from django.db import connection
+            from .models import PoolStat
+            with connection.schema_editor() as se:
+                se.create_model(PoolStat)
+        except Exception:
+            # Ignore if creation fails; user can run migrations instead
+            pass
 
 
 def push_lab_yaml_to_server(server: CMLServer, yaml_text: str):

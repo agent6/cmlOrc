@@ -1,48 +1,65 @@
 {% extends "orchestrator/base.html" %}
+{% load orchestrator_extras %}
 {% block content %}
-  <h2>Health Settings</h2>
-  <p class="text-muted">Control how servers are probed (lightweight ping vs full API), check intervals, quick retries, and backoff.</p>
-  <form method="post" class="mt-3">
-    {% csrf_token %}
-    {{ form.non_field_errors }}
-    <div class="row g-3">
-      <div class="col-md-6">
-        <label class="form-label">Mode</label>
-        {{ form.mode }}
-      </div>
-      <div class="col-md-6">
-        <label class="form-label">HTTP Timeout (sec)</label>
-        {{ form.http_timeout_sec }}
-      </div>
-      <div class="col-md-4">
-        <label class="form-label">Normal Check Interval (sec)</label>
-        {{ form.check_interval_sec }}
-      </div>
-      <div class="col-md-4">
-        <label class="form-label">Scheduler Tick (sec)</label>
-        {{ form.scheduler_tick_sec }}
-      </div>
-      <div class="col-md-4">
-        <label class="form-label">Quick Retries</label>
-        {{ form.quick_retries }}
-      </div>
-      <div class="col-md-4">
-        <label class="form-label">Quick Retry Delay (sec)</label>
-        {{ form.quick_retry_delay_sec }}
-      </div>
-      <div class="col-md-4">
-        <label class="form-label">Backoff Base (sec)</label>
-        {{ form.backoff_base_sec }}
-      </div>
-      <div class="col-md-4">
-        <label class="form-label">Backoff Max (sec)</label>
-        {{ form.backoff_max_sec }}
-      </div>
-    </div>
-    <div class="mt-3">
-      <button class="btn btn-primary" type="submit">Save</button>
-      <a class="btn btn-secondary" href="{% url 'orchestrator:home' %}">Cancel</a>
-    </div>
-  </form>
-{% endblock %}
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <h4 class="card-title mb-2">Health Settings</h4>
+      <p class="text-muted">Control how servers are probed (lightweight ping vs full API), check intervals, quick retries, backoff, and metrics cadence.</p>
 
+      <form method="post" class="mt-3">
+        {% csrf_token %}
+        {{ form.non_field_errors }}
+
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Mode</label>
+            {{ form.mode|add_class:"form-select" }}
+            <div class="form-text">Lightweight uses HEAD/GET; Full authenticates and lists labs.</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">HTTP Timeout (sec)</label>
+            {{ form.http_timeout_sec|add_class:"form-control" }}
+            <div class="form-text">Per-request timeout for probes.</div>
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label">Normal Check Interval (sec)</label>
+            {{ form.check_interval_sec|add_class:"form-control" }}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Scheduler Tick (sec)</label>
+            {{ form.scheduler_tick_sec|add_class:"form-control" }}
+            <div class="form-text">Loop tick; should be ≤ 5s to enable fast retries.</div>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Stats Snapshot Interval (sec)</label>
+            {{ form.stats_interval_sec|add_class:"form-control" }}
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label">Quick Retries</label>
+            {{ form.quick_retries|add_class:"form-control" }}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Quick Retry Delay (sec)</label>
+            {{ form.quick_retry_delay_sec|add_class:"form-control" }}
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label">Backoff Base (sec)</label>
+            {{ form.backoff_base_sec|add_class:"form-control" }}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Backoff Max (sec)</label>
+            {{ form.backoff_max_sec|add_class:"form-control" }}
+          </div>
+        </div>
+
+        <div class="mt-4 d-flex gap-2">
+          <button class="btn btn-primary" type="submit">Save Changes</button>
+          <a class="btn btn-outline-secondary" href="{% url 'orchestrator:home' %}">Back</a>
+        </div>
+      </form>
+    </div>
+  </div>
+{% endblock %}

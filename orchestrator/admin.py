@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import CMLServer, HealthSettings
+from .models import CMLServer, HealthSettings, PoolStat
 
 
 @admin.register(CMLServer)
@@ -14,3 +14,8 @@ class CMLServerAdmin(admin.ModelAdmin):
 class HealthSettingsAdmin(admin.ModelAdmin):
     list_display = ("mode", "check_interval_sec", "scheduler_tick_sec", "http_timeout_sec", "quick_retries")
 
+
+@admin.register(PoolStat)
+class PoolStatAdmin(admin.ModelAdmin):
+    list_display = ("created_at", "total", "available", "in_use", "unavailable", "initializing")
+    ordering = ("-created_at",)

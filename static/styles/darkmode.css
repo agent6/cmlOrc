@@ -1,0 +1,201 @@
+@import 'https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400;1,700&display=swap';
+@import 'https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&display=swap';
+@font-face {
+  font-family: 'Courier Prime';
+  font-style: normal;
+  font-weight: 400;
+  src: url('https://fonts.gstatic.com/s/courierprime/v1/u-4-c0qza6VvO6wQ7QvZ1A.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Courier Prime';
+  font-style: normal;
+  font-weight: 700;
+  src: url('https://fonts.gstatic.com/s/courierprime/v1/u-4-c0qza6VvO6wQ7QvZ1A.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Courier Prime';
+  font-style: italic;
+  font-weight: 400;
+  src: url('https://fonts.gstatic.com/s/courierprime/v1/u-4-c0qza6VvO6wQ7QvZ1A.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Courier Prime';
+  font-style: italic;
+  font-weight: 700;
+  src: url('https://fonts.gstatic.com/s/courierprime/v1/u-4-c0qza6VvO6wQ7QvZ1A.woff2') format('woff2');
+}
+/* Local font faces (optional; will fallback if files aren't present) */
+/* Optional local font-face declarations removed to avoid missing file errors during collectstatic.
+   If you add fonts under static/styles/fonts/, you can restore these blocks. */
+:root {
+  --mf-monument: 'Open Sans', sans-serif; /* fallback to Open Sans */
+  --mf-monument-bold: 'Open Sans', sans-serif;
+  --mf-pixellari: 'Courier Prime', serif;
+  --mf-open-sans: 'Open Sans', sans-serif;
+  --mc-background-color: #171723;
+}
+.open-sans-regular { font-family: 'Open Sans', sans-serif; font-weight: 400; font-style: normal; }
+.courier-prime-regular { font-family: 'Courier Prime', serif; font-weight: 400; font-style: normal; }
+.courier-prime-bold { font-family: 'Courier Prime', serif; font-weight: 700; font-style: normal; }
+.courier-prime-regular-italic { font-family: 'Courier Prime', serif; font-weight: 400; font-style: italic; }
+.courier-prime-bold-italic { font-family: 'Courier Prime', serif; font-weight: 700; font-style: italic; }
+.monument-extended-ultrabold { font-family: 'monument_extendedultrabold', serif; font-weight: normal; font-style: normal; }
+.monument-extended-regular { font-family: 'monument_extendedregular', serif; font-weight: normal; font-style: normal; }
+
+.lab-guide-content { background-color: var(--mc-background-color) !important; }
+.lab-guide-content h2 {
+  font-family: var(--mf-monument);
+  font-weight: 400;
+  font-size: 1.5rem;
+  line-height: 2rem;
+  text-transform: uppercase;
+  color: var(--clr-brand-accent-hi) !important;
+  margin-bottom: 1.5rem;
+}
+.lab-guide-content p * { font-family: var(--mf-open-sans); font-weight: 600; font-size: 1.125rem; line-height: 1.625rem; }
+.lab-guide-content ol li { font-family: var(--mf-open-sans); font-weight: 400; font-size: 1rem; line-height: 2rem; }
+.lab-guide-content ol { padding-left: 1.2rem !important; }
+.lab-guide-content em { font-family: var(--mf-open-sans); font-weight: 600; font-size: 1.125rem; line-height: 1.625rem; font-style: unset; }
+.lab-guide-content ul li { font-family: var(--mf-open-sans); font-weight: 400; font-size: 16px; line-height: 26px; }
+.lab-guide-content ul { padding-left: 1.1rem; }
+.lab-guide-content thead tr th {
+  padding-right: 3rem !important; padding-bottom: 10px !important; border-bottom: 1px solid #fff !important;
+  font-family: var(--mf-open-sans); font-weight: 700; font-size: 18px; line-height: 26px;
+}
+.lab-guide-content tbody tr:nth-child(1) td { padding-top: 20px !important; }
+.lab-guide-content tbody tr td { font-family: var(--mf-open-sans); font-weight: 500; font-size: 16px; line-height: 26px; }
+.lab-guide-content h3, .lab-guide-content .h3 {
+  font-family: var(--mf-open-sans); font-weight: 700 !important; font-style: Bold !important; font-size: 18px !important; line-height: 26px !important; margin-bottom: 10px !important; margin-top: 3rem !important;
+}
+.lab-guide-content code { font-family: var(--mf-open-sans) !important; font-weight: 400 !important; font-size: 1.125rem !important; line-height: 1.625rem !important; color: var(--clr-brand-accent-hi) !important; }
+.lab-guide-content hr { margin-top: 3rem !important; margin-bottom: 3rem !important; }
+.lab-guide-content ol li::marker { color: var(--clr-brand-accent-hi) !important; }
+h2 {
+  font-family: var(--mf-monument);
+  font-weight: 400; font-size: 1.5rem; line-height: 2rem; text-transform: uppercase;
+  color: var(--clr-brand-accent-hi) !important; margin-bottom: 1.5rem;
+}
+.nav-tabs .nav-link { font-family: var(--mf-monument) !important; color: #fff !important; text-transform: uppercase !important; background-color: rgba(0,0,0,0) !important; }
+.nav-tabs .nav-link.active { border-bottom: 2px solid var(--clr-brand-accent) !important; }
+.container { background-color: var(--mc-background-color) !important; }
+
+:root {
+  --clr-dn-100: #000000;
+  --clr-dn-90: #0d0d14;
+  --clr-dn-80: #171723;
+  --clr-dn-70: #1f1f2f;
+  --clr-dn-60: #232335;
+  --clr-dn-50: #27273c;
+  --clr-dn-40: #2e2e39;
+  --clr-dn-30: #45454f;
+  --clr-dn-20: #5d5d65;
+  --clr-brand-primary: #171723;
+  --clr-brand-accent:  #CA9F43;
+  --clr-brand-accent-hi: #E0B861;
+  --fw-error: #D83232;
+  --fw-bg:            var(--clr-dn-80);
+  --fw-bg-soft:       var(--clr-dn-60);
+  --fw-surface:       var(--clr-dn-40);
+  --fw-surface-soft:  var(--clr-dn-40);
+  --fw-text:          #ffffff;
+  --fw-text-muted:    rgba(255,255,255,0.7);
+  --fw-border:        rgba(255,255,255,0.15);
+}
+
+html, body { background: var(--fw-bg) !important; color: var(--fw-text) !important; }
+body { min-height: 100vh; }
+
+.container, .card, .bg-light, .form-control, .form-select, .navbar, .navbar-light, .navbar-expand-lg, .navbar-brand, .navbar-nav, .footer {
+  background-color: var(--fw-surface) !important; color: var(--fw-text) !important;
+}
+.navbar, .navbar-light, .navbar-expand-lg {
+  background: var(--fw-surface-soft) !important; border-bottom: 2px solid var(--fw-border); box-shadow: 0 4px 24px rgba(0,0,0,0.09);
+}
+.navbar .navbar-brand { color: var(--fw-text) !important; font-weight: 800; letter-spacing: -1px; font-size: 1.6rem; }
+.navbar .btn { margin-left: .5rem; }
+
+.bg-light { background: var(--fw-bg-soft) !important; }
+.border, .form-control, .form-select, .card { border-color: var(--fw-border) !important; }
+.form-control, .form-select { background: var(--fw-surface) !important; }
+.form-control:disabled, .form-control[readonly], .form-select:disabled { background: var(--clr-dn-20) !important; color: var(--fw-text-muted) !important; }
+
+.btn-primary, .btn-outline-primary {
+  background: var(--clr-brand-accent) !important; border-color: var(--clr-brand-accent) !important; color: #171723 !important; font-weight: 700; box-shadow: 0 2px 8px rgba(202,159,67,0.08); transition: all .12s;
+}
+.btn-primary:hover, .btn-outline-primary:hover { background: var(--clr-brand-accent-hi) !important; border-color: var(--clr-brand-accent-hi) !important; }
+.btn-success, .btn-outline-success {
+  background: var(--clr-brand-accent-hi) !important; border-color: var(--clr-brand-accent-hi) !important; color: #171723 !important; font-weight: 700;
+}
+.btn-success:hover, .btn-outline-success:hover { background: var(--clr-brand-accent) !important; border-color: var(--clr-brand-accent) !important; }
+.btn-secondary, .btn-outline-secondary { background: var(--clr-dn-30) !important; color: var(--fw-text) !important; }
+
+.text-muted { color: var(--fw-text-muted) !important; }
+.fw-bold { font-weight: bold; }
+
+::-webkit-scrollbar { width: 10px; background: var(--clr-dn-80); }
+::-webkit-scrollbar-thumb { background: var(--clr-dn-100); border-radius: 6px; }
+::selection { background: var(--clr-brand-accent-hi); color:#171723; }
+
+a, .btn-link { color: var(--clr-brand-accent-hi); }
+a:hover, .btn-link:hover { color: var(--clr-brand-accent); }
+
+.hero {
+  padding: 64px 0 48px; background: var(--fw-surface-soft); color: var(--fw-text); border-radius: 14px; box-shadow: 0 6px 32px rgba(0,0,0,0.17); max-width: 940px; margin: 0 auto 2.3rem; text-align: center;
+}
+.hero h1 { font-size: 3rem; font-weight: 800; letter-spacing: -2px; margin-bottom: 1.1rem; }
+.hero p.lead { color: var(--fw-text-muted); font-size: 1.23rem; margin-bottom: 2.1rem; }
+.hero .btn-lg { font-size: 1.16rem; padding: .82rem 2.1rem; margin: 0 .5rem .3rem; border-radius: 8px; }
+
+.features-row { max-width: 1100px; margin: 0 auto 1.8rem; display: flex; gap: 2rem; justify-content: center; }
+.feature { background: var(--fw-surface); border-radius: 1.2rem; box-shadow: 0 2px 16px rgba(0,0,0,0.11); padding: 2.2rem 1.4rem 1.6rem; border: 1.5px solid var(--fw-border); flex: 1 1 0; transition: box-shadow .2s, border-color .18s; }
+.feature h4 { color: var(--clr-brand-accent-hi); font-weight: 800; font-size: 1.26rem; margin-bottom: .8rem; }
+.feature p { color: var(--fw-text-muted); font-size: 1.1rem; }
+.feature:hover { box-shadow: 0 8px 32px rgba(224,184,97,0.06), 0 2px 24px rgba(0,0,0,0.22); border-color: var(--clr-brand-accent-hi); }
+
+footer { color: var(--fw-text-muted) !important; font-size: 1.02rem; margin-top: 2.2rem; }
+
+@media (max-width: 900px){ .features-row { flex-direction: column; gap: 1.3rem; } .hero h1 { font-size: 2.1rem; } }
+@media (max-width: 600px){ .hero { padding: 38px 0 28px; } .hero h1 { font-size: 1.36rem; } }
+
+#terminal, .xterm, .xterm-viewport, .xterm-screen { background: var(--clr-dn-90) !important; color:#fff !important; }
+
+.nav-tabs { border-bottom: 2px solid var(--fw-border); }
+.nav-tabs .nav-link {
+  background: none !important; border: none !important; color: var(--clr-brand-accent-hi) !important; font-weight: 700; font-size: 1.08rem; padding: .9rem 1.5rem; transition: color .17s, background .13s;
+}
+.nav-tabs .nav-link.active {
+  color: var(--fw-text) !important; background: var(--fw-surface) !important; border-bottom: 3px solid var(--clr-brand-accent) !important; font-weight: 900;
+}
+.nav-tabs .nav-link:hover:not(.active){ color: var(--clr-brand-accent) !important; background: var(--fw-surface-soft) !important; }
+
+.card-text{ white-space: pre-wrap; font-size: .85rem; }
+.card-text code, .card-text pre{ font-family: "Fira Code", monospace; }
+
+/* --------------------------------------------------------------
+   Tables / badges / buttons theme tweaks
+-------------------------------------------------------------- */
+.table { color: var(--fw-text) !important; border-color: var(--fw-border) !important; }
+.table > :not(caption) > * > * { background-color: var(--fw-surface) !important; border-color: var(--fw-border) !important; }
+.table thead th { background: var(--fw-surface-soft) !important; color: var(--fw-text) !important; border-bottom: 2px solid var(--fw-border) !important; }
+.table td, .table th { color: var(--fw-text) !important; }
+.table td a, .table th a { color: var(--clr-brand-accent-hi) !important; }
+.table td .text-muted, .table th .text-muted { color: var(--fw-text-muted) !important; }
+.table-hover tbody tr:hover { background: var(--fw-surface-soft) !important; }
+
+/* Badges mapped to theme */
+.badge.bg-success { background: var(--clr-brand-accent-hi) !important; color: #171723 !important; }
+.badge.bg-warning { background: var(--clr-brand-accent) !important; color: #171723 !important; }
+.badge.bg-secondary { background: var(--clr-dn-30) !important; color: var(--fw-text) !important; }
+.badge.bg-info { background: var(--fw-surface-soft) !important; color: var(--fw-text) !important; }
+
+/* Outline buttons harmonized to theme */
+.btn-outline-info { color: var(--clr-brand-accent-hi) !important; border-color: var(--clr-brand-accent-hi) !important; }
+.btn-outline-info:hover { color: #171723 !important; background: var(--clr-brand-accent-hi) !important; border-color: var(--clr-brand-accent-hi) !important; }
+.btn-outline-danger { color: #ff6b6b !important; border-color: #ff6b6b !important; background: transparent !important; }
+.btn-outline-danger:hover { background: #ff6b6b !important; color: #171723 !important; border-color: #ff6b6b !important; }
+.btn-outline-secondary { color: var(--fw-text) !important; border-color: var(--fw-border) !important; background: transparent !important; }
+.btn-outline-secondary:hover { background: var(--fw-surface-soft) !important; color: var(--fw-text) !important; border-color: var(--fw-border) !important; }
+.btn, .btn-sm { border-radius: .5rem; box-shadow: 0 1px 4px rgba(0,0,0,0.12); }
+
+/* Buttons within tables: slightly tighter spacing */
+td .btn { margin-right: .25rem; margin-bottom: .2rem; }

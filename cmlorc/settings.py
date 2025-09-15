@@ -5,15 +5,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "dev-insecure-secret-key-change-me")
 DEBUG = os.environ.get("DJANGO_DEBUG", "1") == "1"
-_raw_hosts = os.environ.get("DJANGO_ALLOWED_HOSTS", "*")
-ALLOWED_HOSTS = [h.strip() for h in _raw_hosts.split(",") if h.strip()]
-if os.environ.get("DJANGO_ALLOW_ALL_HOSTS", "0") == "1":
-    ALLOWED_HOSTS = ["*"]
-# In development, automatically allow common localhost hosts
-if DEBUG and ALLOWED_HOSTS and ALLOWED_HOSTS != ["*"]:
-    for host in ("localhost", "127.0.0.1", "::1", "0.0.0.0"):
-        if host not in ALLOWED_HOSTS:
-            ALLOWED_HOSTS.append(host)
+# Allow all hosts (wildcard). Note: not recommended for production
+ALLOWED_HOSTS = ["*"]
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -27,6 +20,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -77,6 +71,16 @@ USE_TZ = True
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "static"] if (BASE_DIR / "static").exists() else []
+
+# Serve static files in production via WhiteNoise (when DEBUG=0)
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
 
 LOGIN_URL = "/login/"
 LOGIN_REDIRECT_URL = "/"

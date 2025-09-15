@@ -1,0 +1,79 @@
+{% extends "orchestrator/base.html" %}
+{% block content %}
+  <h2>Pool Metrics</h2>
+  <p class="text-muted">Current available: <strong>{{ pool_available }}</strong> / {{ pool_total }}</p>
+
+  <div class="mb-3">
+    <canvas id="poolChart" height="120"></canvas>
+  </div>
+
+  <div class="d-flex align-items-center gap-2 mb-3">
+    <label for="windowSelect" class="form-label me-2 mb-0">Window</label>
+    <select id="windowSelect" class="form-select form-select-sm" style="width: auto;">
+      <option value="15m">Last 15 min</option>
+      <option value="1h" selected>Last 1 hour</option>
+      <option value="6h">Last 6 hours</option>
+      <option value="24h">Last 24 hours</option>
+      <option value="7d">Last 7 days</option>
+    </select>
+  </div>
+
+  <div class="text-muted small">Auto-refreshes every 30s. Defaults to last 1 hour.</div>
+
+  <div class="mt-3">
+    <a href="{% url 'orchestrator:home' %}" class="btn btn-secondary">Back to Servers</a>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script>
+    (function(){
+      const ctx = document.getElementById('poolChart').getContext('2d');
+      let chart;
+      let currentWindow = '1h';
+      async function loadData(){
+        const url = '{% url "orchestrator:pool_metrics_data" %}?limit=500&window=' + encodeURIComponent(currentWindow);
+        const res = await fetch(url, {cache:'no-cache'});
+        const data = await res.json();
+        if(data.error){ console.warn('metrics error', data.error); return; }
+        const labels = data.labels;
+        const s = data.series || {};
+        const datasets = [
+          {label:'Available', data:s.available||[], borderColor:'#198754', backgroundColor:'rgba(25,135,84,0.2)', tension:0.2},
+          {label:'In Use', data:s.in_use||[], borderColor:'#ffc107', backgroundColor:'rgba(255,193,7,0.2)', tension:0.2},
+          {label:'Unavailable', data:s.unavailable||[], borderColor:'#6c757d', backgroundColor:'rgba(108,117,125,0.2)', tension:0.2},
+          {label:'Initializing', data:s.initializing||[], borderColor:'#0dcaf0', backgroundColor:'rgba(13,202,240,0.2)', tension:0.2},
+          {label:'Total', data:s.total||[], borderColor:'#0d6efd', backgroundColor:'rgba(13,110,253,0.1)', borderDash:[5,5], tension:0.2}
+        ];
+        if(!chart){
+          chart = new Chart(ctx, {
+            type: 'line',
+            data: { labels, datasets },
+            options: {
+              responsive: true,
+              animation: false,
+              interaction: { mode: 'index', intersect: false },
+              scales: {
+                x: { ticks: { maxTicksLimit: 10 } },
+                y: { beginAtZero: true, precision: 0 }
+              },
+              plugins: {
+                legend: { position: 'bottom' },
+                tooltip: { enabled: true }
+              }
+            }
+          });
+        } else {
+          chart.data.labels = labels;
+          chart.data.datasets.forEach((ds, idx) => { ds.data = datasets[idx].data; });
+          chart.update();
+        }
+      }
+      loadData();
+      setInterval(loadData, 30000);
+      document.getElementById('windowSelect').addEventListener('change', function(e){
+        currentWindow = e.target.value;
+        loadData();
+      });
+    })();
+  </script>
+{% endblock %}

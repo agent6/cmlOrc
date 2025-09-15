@@ -1,0 +1,13 @@
+{% extends "orchestrator/base.html" %}
+{% block content %}
+  <h2>Pool Metrics</h2>
+  <div class="alert alert-warning">
+    Pool metrics storage is not initialized yet. Please run database migrations to create the required tables.
+    <div class="small text-muted mt-2">{{ error }}</div>
+  </div>
+  <p>From your terminal, run:</p>
+  <pre><code>python manage.py makemigrations orchestrator
+python manage.py migrate</code></pre>
+  <p>After applying migrations, return to this page to see historical pool capacity snapshots.</p>
+{% endblock %}
+

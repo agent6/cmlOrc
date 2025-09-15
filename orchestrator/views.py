@@ -2,6 +2,8 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.views.decorators.csrf import csrf_exempt
+from django.http import JsonResponse
+from django.utils import timezone
 from django.http import JsonResponse, HttpResponse
 import json
 import socket
@@ -30,7 +32,9 @@ from .cml import CMLClient
 @login_required
 def home(request):
     servers = CMLServer.objects.all().order_by("name")
-    return render(request, "orchestrator/home.html", {"servers": servers})
+    total = servers.count()
+    available = servers.filter(status=CMLServer.STATUS_AVAILABLE).count()
+    return render(request, "orchestrator/home.html", {"servers": servers, "pool_total": total, "pool_available": available})
 
 
 @login_required
@@ -256,6 +260,7 @@ def health_settings(request):
                 "quick_retry_delay_sec",
                 "backoff_base_sec",
                 "backoff_max_sec",
+                "stats_interval_sec",
             ):
                 setattr(hs, field, form.cleaned_data[field])
             hs.save()
@@ -272,9 +277,85 @@ def health_settings(request):
                 quick_retry_delay_sec=hs.quick_retry_delay_sec,
                 backoff_base_sec=hs.backoff_base_sec,
                 backoff_max_sec=hs.backoff_max_sec,
+                stats_interval_sec=hs.stats_interval_sec,
             )
         )
     return render(request, "orchestrator/health_settings.html", {"form": form})
+
+
+@login_required
+def pool_metrics(request):
+    try:
+        from .models import PoolStat
+        stats = PoolStat.objects.all()[:200]
+        total = CMLServer.objects.count()
+        available = CMLServer.objects.filter(status=CMLServer.STATUS_AVAILABLE).count()
+        return render(request, "orchestrator/pool_metrics.html", {"stats": stats, "pool_total": total, "pool_available": available})
+    except Exception as e:
+        # Attempt to create the table dynamically (dev convenience); else show guidance
+        try:
+            from django.db import connection
+            from .models import PoolStat
+            with connection.schema_editor() as se:
+                se.create_model(PoolStat)
+            # retry load after creating
+            stats = PoolStat.objects.all()[:200]
+            total = CMLServer.objects.count()
+            available = CMLServer.objects.filter(status=CMLServer.STATUS_AVAILABLE).count()
+            return render(request, "orchestrator/pool_metrics.html", {"stats": stats, "pool_total": total, "pool_available": available})
+        except Exception as e2:
+            return render(request, "orchestrator/pool_metrics_missing.html", {"error": str(e2)})
+
+
+@login_required
+def pool_metrics_data(request):
+    """JSON time series for PoolStat to drive charts."""
+    try:
+        from .models import PoolStat
+        qs = PoolStat.objects.order_by("created_at")
+        # Time window filtering
+        window = (request.GET.get("window") or "1h").lower()
+        now = timezone.now()
+        delta_map = {
+            "15m": timezone.timedelta(minutes=15),
+            "1h": timezone.timedelta(hours=1),
+            "6h": timezone.timedelta(hours=6),
+            "24h": timezone.timedelta(hours=24),
+            "7d": timezone.timedelta(days=7),
+        }
+        if window in delta_map:
+            start = now - delta_map[window]
+            qs = qs.filter(created_at__gte=start)
+        limit = int(request.GET.get("limit", 500))
+        if limit > 0:
+            total_count = qs.count()
+            if total_count > limit:
+                qs = qs[total_count - limit : total_count]
+        labels = []
+        available = []
+        in_use = []
+        unavailable = []
+        initializing = []
+        total = []
+        for s in qs:
+            labels.append(s.created_at.strftime("%Y-%m-%d %H:%M:%S"))
+            total.append(s.total)
+            available.append(s.available)
+            in_use.append(s.in_use)
+            unavailable.append(s.unavailable)
+            initializing.append(s.initializing)
+        return JsonResponse({
+            "labels": labels,
+            "series": {
+                "total": total,
+                "available": available,
+                "in_use": in_use,
+                "unavailable": unavailable,
+                "initializing": initializing,
+            }
+        })
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=500)
 
 
 @login_required

@@ -12,7 +12,7 @@ from django.db import close_old_connections
 from django.conf import settings
 
 from .models import CMLServer, HealthSettings
-from .services import probe_health, check_and_release_expired_leases
+from .services import probe_health, check_and_release_expired_leases, record_pool_snapshot
 
 
 _worker_thread = None
@@ -24,6 +24,7 @@ _fail_counts: dict[int, int] = {}
 _skip_until: dict[int, float] = {}
 _confirm_remaining: dict[int, int] = {}
 _settings_snapshot: tuple | None = None
+_last_stats_time: float = 0.0
 
 # Simple round-robin state to ensure we check one server per tick
 _server_ids: list[int] = []
@@ -135,6 +136,13 @@ def _loop():
                                 _skip_until[s.pk] = now2 + delay
 
             check_and_release_expired_leases()
+            # Record pool stats on interval
+            try:
+                if (time.time() - globals().get("_last_stats_time", 0.0)) >= max(5, quick_delay) and (time.time() - _last_stats_time) >= (hs.stats_interval_sec if 'hs' in locals() else 60):
+                    record_pool_snapshot()
+                    globals()["_last_stats_time"] = time.time()
+            except Exception:
+                pass
         except Exception:
             logger.exception("Background worker loop error")
         finally:
