@@ -72,3 +72,63 @@ class HealthSettingsForm(forms.Form):
     backoff_base_sec = forms.IntegerField(min_value=1, max_value=3600, label="Backoff base (sec)")
     backoff_max_sec = forms.IntegerField(min_value=1, max_value=86400, label="Backoff max (sec)")
     stats_interval_sec = forms.IntegerField(min_value=5, max_value=86400, initial=60, label="Stats snapshot interval (sec)")
+
+
+# -----------------------------
+# User management (staff-only)
+# -----------------------------
+
+class UserCreateForm(forms.ModelForm):
+    password1 = forms.CharField(label="Password", widget=forms.PasswordInput)
+    password2 = forms.CharField(label="Confirm password", widget=forms.PasswordInput)
+    is_staff = forms.BooleanField(label="Staff access", required=False, initial=False)
+
+    class Meta:
+        model = User
+        fields = ["username", "email"]
+
+    def clean(self):
+        cleaned = super().clean()
+        p1 = cleaned.get("password1")
+        p2 = cleaned.get("password2")
+        if p1 and p2 and p1 != p2:
+            self.add_error("password2", "Passwords do not match")
+        return cleaned
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user.is_staff = bool(self.cleaned_data.get("is_staff"))
+        # Never create superusers from this form
+        user.is_superuser = False
+        user.set_password(self.cleaned_data.get("password1") or "")
+        if commit:
+            user.save()
+        return user
+
+
+class UserEditForm(forms.ModelForm):
+    is_staff = forms.BooleanField(label="Staff access", required=False)
+
+    class Meta:
+        model = User
+        fields = ["username", "email"]
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user.is_staff = bool(self.cleaned_data.get("is_staff"))
+        if commit:
+            user.save()
+        return user
+
+
+class UserPasswordForm(forms.Form):
+    password1 = forms.CharField(label="New password", widget=forms.PasswordInput)
+    password2 = forms.CharField(label="Confirm new password", widget=forms.PasswordInput)
+
+    def clean(self):
+        cleaned = super().clean()
+        p1 = cleaned.get("password1")
+        p2 = cleaned.get("password2")
+        if p1 and p2 and p1 != p2:
+            self.add_error("password2", "Passwords do not match")
+        return cleaned

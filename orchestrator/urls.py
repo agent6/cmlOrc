@@ -6,6 +6,12 @@ app_name = "orchestrator"
 
 urlpatterns = [
     path("", views.home, name="home"),
+    # User management (staff only)
+    path("users/", views.user_list, name="user_list"),
+    path("users/add/", views.user_add, name="user_add"),
+    path("users/<int:pk>/edit/", views.user_edit, name="user_edit"),
+    path("users/<int:pk>/password/", views.user_password, name="user_password"),
+    path("users/<int:pk>/delete/", views.user_delete, name="user_delete"),
     path("settings/health/", views.health_settings, name="health_settings"),
     path("labs/upload/", views.labs_upload, name="labs_upload"),
     path("labs/upload/item/<int:pk>/", views.labs_upload_item, name="labs_upload_item"),

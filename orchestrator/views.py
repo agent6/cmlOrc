@@ -1,5 +1,5 @@
 from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
@@ -17,7 +17,15 @@ import ipaddress
 import uuid
 
 from .models import CMLServer, HealthSettings
-from .forms import CMLServerForm, AssignmentForm, LabUploadForm, HealthSettingsForm
+from .forms import (
+    CMLServerForm,
+    AssignmentForm,
+    LabUploadForm,
+    HealthSettingsForm,
+    UserCreateForm,
+    UserEditForm,
+    UserPasswordForm,
+)
 from .services import (
     assign_server_to_student_by_name,
     assign_via_pool,
@@ -204,6 +212,93 @@ def server_delete(request, pk: int):
         messages.success(request, f"Deleted server {name}.")
         return redirect("orchestrator:home")
     return render(request, "orchestrator/server_delete_confirm.html", {"server": server})
+
+
+# -----------------------------
+# User management (staff-only)
+# -----------------------------
+
+def _staff_required(user):
+    return user.is_authenticated and user.is_staff
+
+
+@login_required
+@user_passes_test(_staff_required)
+def user_list(request):
+    from django.contrib.auth import get_user_model
+
+    User = get_user_model()
+    users = User.objects.order_by("username")
+    return render(request, "orchestrator/users_list.html", {"users": users})
+
+
+@login_required
+@user_passes_test(_staff_required)
+def user_add(request):
+    if request.method == "POST":
+        form = UserCreateForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "User created.")
+            return redirect("orchestrator:user_list")
+    else:
+        form = UserCreateForm()
+    return render(request, "orchestrator/user_form.html", {"form": form, "title": "Add User"})
+
+
+@login_required
+@user_passes_test(_staff_required)
+def user_edit(request, pk: int):
+    from django.contrib.auth import get_user_model
+
+    User = get_user_model()
+    u = get_object_or_404(User, pk=pk)
+    if request.method == "POST":
+        form = UserEditForm(request.POST, instance=u)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "User updated.")
+            return redirect("orchestrator:user_list")
+    else:
+        form = UserEditForm(instance=u, initial={"is_staff": u.is_staff})
+    return render(request, "orchestrator/user_form.html", {"form": form, "title": f"Edit {u.username}"})
+
+
+@login_required
+@user_passes_test(_staff_required)
+def user_password(request, pk: int):
+    from django.contrib.auth import get_user_model
+
+    User = get_user_model()
+    u = get_object_or_404(User, pk=pk)
+    if request.method == "POST":
+        form = UserPasswordForm(request.POST)
+        if form.is_valid():
+            u.set_password(form.cleaned_data["password1"])
+            u.save(update_fields=["password"])
+            messages.success(request, "Password updated.")
+            return redirect("orchestrator:user_list")
+    else:
+        form = UserPasswordForm()
+    return render(request, "orchestrator/user_password_form.html", {"form": form, "user_obj": u, "title": f"Change Password - {u.username}"})
+
+
+@login_required
+@user_passes_test(_staff_required)
+def user_delete(request, pk: int):
+    from django.contrib.auth import get_user_model
+
+    User = get_user_model()
+    u = get_object_or_404(User, pk=pk)
+    if request.user.pk == u.pk:
+        messages.error(request, "You cannot delete your own account.")
+        return redirect("orchestrator:user_list")
+    if request.method == "POST":
+        username = u.username
+        u.delete()
+        messages.success(request, f"Deleted user {username}.")
+        return redirect("orchestrator:user_list")
+    return render(request, "orchestrator/user_delete_confirm.html", {"user_obj": u})
 
 
 @login_required

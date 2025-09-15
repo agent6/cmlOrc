@@ -12,10 +12,17 @@
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
       <div class="container-fluid">
         <a class="navbar-brand" href="/">CML Orchestrator</a>
-        <div class="d-flex">
+        <div class="d-flex align-items-center gap-2">
+          {% if request.user.is_authenticated and request.user.is_staff %}
+            <a class="btn btn-outline-secondary btn-sm" href="{% url 'orchestrator:user_add' %}">Add User</a>
+            <a class="btn btn-outline-secondary btn-sm" href="{% url 'orchestrator:user_list' %}">Manage Users</a>
+          {% endif %}
           {% if request.user.is_authenticated %}
             <span class="navbar-text me-2">{{ request.user.username }}</span>
-            <a class="btn btn-outline-light btn-sm" href="/logout/">Logout</a>
+            <form method="post" action="{% url 'logout' %}">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-outline-light btn-sm">Logout</button>
+            </form>
           {% endif %}
         </div>
       </div>

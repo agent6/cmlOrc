@@ -1,12 +1,29 @@
 import os
 from pathlib import Path
 
+
+def _csv_env(name: str, default=None):
+    """Parse a comma-separated environment variable into a list.
+    Trims whitespace and drops empty items.
+    """
+    raw = os.environ.get(name)
+    if not raw:
+        return [] if default is None else list(default)
+    return [item.strip() for item in raw.split(",") if item.strip()]
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "dev-insecure-secret-key-change-me")
 DEBUG = os.environ.get("DJANGO_DEBUG", "1") == "1"
 # Allow all hosts (wildcard). Note: not recommended for production
 ALLOWED_HOSTS = ["*"]
+# CSRF trusted origins (HTTPS origins only). Env overrides defaults below.
+CSRF_TRUSTED_ORIGINS = _csv_env(
+    "CSRF_TRUSTED_ORIGINS",
+    [
+        "https://cmlorc.myexam-prep.com",
+    ],
+)
 
 INSTALLED_APPS = [
     "django.contrib.admin",
