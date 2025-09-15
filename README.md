@@ -2,13 +2,26 @@
 
 Minimal Django app to orchestrate a pool of Cisco CML servers for students.
 
+Documentation: docs/README.md
+
 ## Run The Server
 
-Start with Gunicorn on port 8005:
+Development:
+- `python -m venv .venv && source .venv/bin/activate`
+- `pip install "Django>=4.2" whitenoise`
+- Copy `.env.example` to `.env` and edit it.
+- Initialize DB: `python manage.py migrate`
+- Create admin: `python manage.py createsuperuser`
+- Start: `python manage.py runserver 0.0.0.0:8005`
 
-```
-gunicorn cmlorc.wsgi:application --workers 5 --bind 0.0.0.0:8005 --log-level info
-```
+Production (example):
+- `python -m pip install gunicorn`
+- `python manage.py collectstatic --no-input`
+- `gunicorn cmlorc.wsgi:application --workers 5 --bind 0.0.0.0:8005 --log-level info`
+
+Notes:
+- A tiny `.env` loader is included; if a `.env` file exists, it is loaded automatically.
+- The background worker auto-runs during `runserver`. In production, either set `RUN_BACKGROUND_WORKER=1` for one process, or run `python manage.py runhealthworker` as a separate service.
 
 ## Simple API
 
