@@ -197,10 +197,11 @@ footer { color: var(--fw-text-muted) !important; font-size: 1.02rem; margin-top:
 .table-hover tbody tr:hover { background: var(--fw-surface-soft) !important; }
 
 /* Badges mapped to theme */
-.badge.bg-success { background: var(--clr-brand-accent-hi) !important; color: var(--fw-text) !important; }
-.badge.bg-warning { background: var(--clr-brand-accent) !important; color: var(--fw-text) !important; }
-.badge.bg-secondary { background: var(--clr-dn-30) !important; color: var(--fw-text) !important; }
-.badge.bg-info { background: var(--fw-surface-soft) !important; color: var(--fw-text) !important; }
+/* Use dark text for better readability on light badge backgrounds */
+.badge.bg-success { background: var(--clr-brand-accent-hi) !important; color: #171723 !important; }
+.badge.bg-warning { background: var(--clr-brand-accent) !important; color: #171723 !important; }
+.badge.bg-secondary { background: var(--clr-dn-30) !important; color: #171723 !important; }
+.badge.bg-info { background: var(--fw-surface-soft) !important; color: #171723 !important; }
 
 /* Outline buttons harmonized to theme */
 .btn-outline-info { color: var(--clr-brand-accent-hi) !important; border-color: var(--clr-brand-accent-hi) !important; }
