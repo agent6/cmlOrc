@@ -158,19 +158,25 @@ class CMLClient:
 
     # Lightweight reachability probe (no auth, minimal request)
     def ping(self) -> bool:
-        url = f"{self.base_url}"
-        for method, path in (("HEAD", ""), ("HEAD", "/labs"), ("GET", "")):
+        """Quick reachability check.
+        Keep it fast even if the general client timeout is larger:
+        - Try a single HEAD to /labs (most specific, cheap).
+        - Fallback to a HEAD to base if that fails quickly.
+        Cap per-attempt timeout to 2 seconds to avoid long stalls on dead hosts.
+        """
+        quick_timeout = min(float(self.timeout or 2), 2.0)
+        for method, path in (("HEAD", "/labs"), ("HEAD", "")):
             try:
                 u = f"{self.base_url}{path}"
                 req = urllib.request.Request(u, headers={}, method=method)
-                with urllib.request.urlopen(req, timeout=self.timeout, context=self._ctx) as resp:
+                with urllib.request.urlopen(req, timeout=quick_timeout, context=self._ctx) as resp:
                     _ = resp.status
                     return True
             except urllib.error.HTTPError:
+                # Any HTTP response implies reachability
                 return True
-            except urllib.error.URLError:
-                continue
             except Exception:
+                # Try next variant quickly
                 continue
         return False
 

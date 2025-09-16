@@ -12,7 +12,7 @@ from django.db import close_old_connections
 from django.conf import settings
 
 from .models import CMLServer, HealthSettings
-from .services import probe_health, check_and_release_expired_leases, record_pool_snapshot
+from .services import probe_health, check_and_release_expired_leases, record_pool_snapshot, release_server
 
 
 _worker_thread = None
@@ -76,7 +76,17 @@ def _loop():
             picked = None
             total = len(_server_ids)
             attempts = 0
-            while total and attempts < total:
+            # Priority pass: if any server is in quick-confirmation mode and ready (skip expired), pick it first
+            try:
+                ready_confirms = [
+                    pk for pk, rem in _confirm_remaining.items()
+                    if rem > 0 and (_skip_until.get(pk, 0) <= now)
+                ]
+                if ready_confirms:
+                    picked = ready_confirms[0]
+            except Exception:
+                picked = None
+            while total and attempts < total and picked is None:
                 pk = _server_ids[_server_idx % total]
                 _server_idx = (_server_idx + 1) % total
                 until = _skip_until.get(pk, 0)
@@ -129,6 +139,13 @@ def _loop():
                                 _confirm_remaining.pop(s.pk, None)
                                 if s.status != s.STATUS_UNAVAILABLE:
                                     s.mark_unavailable()
+                                    # If this server was assigned, release it immediately so the user can be reassigned.
+                                    try:
+                                        if s.assigned_to_id:
+                                            release_server(s, stop_and_wipe=False)
+                                            logger.info("Released assignment from %s due to UNAVAILABLE state", s.name)
+                                    except Exception:
+                                        logger.exception("Failed to release assignment after marking UNAVAILABLE for %s", s.name)
                                     logger.warning("Health marked UNAVAILABLE for %s after 4 failed checks", s.name)
                                 n = _fail_counts.get(s.pk, 0) + 1
                                 _fail_counts[s.pk] = n
