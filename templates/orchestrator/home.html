@@ -2,7 +2,7 @@
 {% load orchestrator_extras %}
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-3">
-  <h2>Servers <small class="text-muted">(Available: {{ pool_available }} / {{ pool_total }})</small></h2>
+  <h2>Servers {% include "orchestrator/partials/pool_counts.html" %}</h2>
   <div class="d-flex gap-2">
     <a href="{% url 'orchestrator:health_settings' %}" class="btn btn-outline-secondary">Health Settings</a>
     <a href="{% url 'orchestrator:pool_metrics' %}" class="btn btn-outline-secondary">Pool Metrics</a>

@@ -459,6 +459,19 @@ def server_row(request, pk: int):
     return render(request, "orchestrator/partials/server_row.html", {"s": server})
 
 
+@login_required
+def pool_counts(request):
+    """Return a small HTML snippet with current pool availability counts.
+    Used by HTMX on the home page header to refresh numbers.
+    """
+    servers = CMLServer.objects.all()
+    ctx = {
+        "pool_total": servers.count(),
+        "pool_available": servers.filter(status=CMLServer.STATUS_AVAILABLE).count(),
+    }
+    return render(request, "orchestrator/partials/pool_counts.html", ctx)
+
+
 @csrf_exempt
 def api_assign(request):
     """API: Assign a user to a lab via the pool and return server IP.

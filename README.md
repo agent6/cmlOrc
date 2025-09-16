@@ -16,16 +16,17 @@ Documentation: docs/README.md
 
 Development:
 - `python -m venv .venv && source .venv/bin/activate`
-- `pip install "Django>=4.2" whitenoise`
+- `python -m pip install -U pip wheel`
+- Install deps: `pip install -r requirements.txt`
 - Copy `.env.example` to `.env` and edit it.
 - Initialize DB: `python manage.py migrate`
 - Create admin: `python manage.py createsuperuser`
 - Start: `python manage.py runserver 0.0.0.0:8005`
 
 Production (example):
-- `python -m pip install gunicorn`
-- `python manage.py collectstatic --noinput`
-- `gunicorn cmlorc.wsgi:application --workers 5 --bind 0.0.0.0:8005 --log-level info`
+- Install deps: `python -m pip install -r requirements.txt`
+- Collect static: `python manage.py collectstatic --noinput --clear`
+- Run app: `gunicorn cmlorc.wsgi:application --workers 5 --bind 0.0.0.0:8005 --log-level info`
 
 Notes:
 - A tiny `.env` loader is included; if a `.env` file exists, it is loaded automatically.
@@ -95,3 +96,13 @@ curl -sS -X POST http://localhost:8005/api/release/ \
 ```
 
 Note: For production, protect these endpoints with auth (session, token, or network boundary).
+
+## Static Files
+
+- Source assets live in `static/` (you edit these).
+- Collected assets are written to `staticfiles/` by `collectstatic` (hashed, gzipped). This folder is generated at build/deploy and is ignored by git.
+- WhiteNoise is enabled and configured to keep only hashed files. Templates reference logical paths (e.g., `{% static 'styles/darkmode.css' %}`) which resolve to the latest hashed asset via the manifest.
+- To refresh static output, run: `python manage.py collectstatic --noinput --clear`.
+
+Favicon
+- A placeholder favicon is provided at `static/favicon.png`. The base template links it, and `/favicon.ico` is routed to it.

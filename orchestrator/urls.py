@@ -30,4 +30,5 @@ urlpatterns = [
     path("servers/<int:pk>/delete/", views.server_delete, name="server_delete"),
     path("pool/metrics/", views.pool_metrics, name="pool_metrics"),
     path("pool/metrics/data/", views.pool_metrics_data, name="pool_metrics_data"),
+    path("pool/counts/", views.pool_counts, name="pool_counts"),
 ]

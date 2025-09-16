@@ -1,20 +1,27 @@
-anyio==4.10.0
-asgiref==3.9.1
-click==8.2.1
+# CML Orchestrator requirements
+# Install: pip install -r requirements.txt
+
+# Core
 Django==5.2.6
+whitenoise==6.10.0
 gunicorn==23.0.0
-h11==0.16.0
-httptools==0.6.4
-idna==3.10
-packaging==25.0
 python-dotenv==1.1.1
 PyYAML==6.0.2
-sniffio==1.3.1
 sqlparse==0.5.3
-uvicorn-worker==0.3.0
+packaging==25.0
+asgiref==3.9.1
+
+# ASGI/optional runtime (uvicorn worker)
 uvicorn==0.35.0
+uvicorn-worker==0.3.0
 uvloop==0.21.0
-watchfiles==1.1.0
+httptools==0.6.4
 websockets==15.0.1
+watchfiles==1.1.0
+anyio==4.10.0
+h11==0.16.0
+sniffio==1.3.1
+idna==3.10
+
+# Build utility
 wheel==0.45.1
-whitenoise==6.10.0
