@@ -318,7 +318,7 @@ def lease_log(request):
     if "orchestrator_leaselog" not in connection.introspection.table_names():
         from django.core.paginator import Paginator
         empty = []
-        paginator = Paginator(empty, 50)
+        paginator = Paginator(empty, 15)
         page_obj = paginator.get_page(1)
         servers = CMLServer.objects.order_by("name").values_list("name", flat=True)
         from django.contrib.auth import get_user_model
@@ -332,6 +332,7 @@ def lease_log(request):
             "users": users,
             "selected": {"q": q, "event": event, "user": user, "server": server, "start": start, "end": end},
             "missing_table": True,
+            "qs_no_page": "",
         }
         return render(request, "orchestrator/lease_log.html", ctx)
 
@@ -370,9 +371,13 @@ def lease_log(request):
     # Pagination
     from django.core.paginator import Paginator
 
-    paginator = Paginator(logs.order_by("-created_at"), 50)
+    paginator = Paginator(logs.order_by("-created_at"), 15)
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
+    # Build querystring without page for pagination links
+    qs_copy = request.GET.copy()
+    qs_copy.pop("page", None)
+    qs_no_page = qs_copy.urlencode()
 
     # For filter dropdowns
     servers = CMLServer.objects.order_by("name").values_list("name", flat=True)
@@ -395,6 +400,7 @@ def lease_log(request):
             "start": start,
             "end": end,
         },
+        "qs_no_page": qs_no_page,
     }
     return render(request, "orchestrator/lease_log.html", ctx)
 
