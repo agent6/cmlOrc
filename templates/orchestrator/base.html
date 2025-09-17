@@ -17,6 +17,7 @@
           {% if request.user.is_authenticated and request.user.is_staff %}
             <a class="btn btn-outline-secondary btn-sm" href="{% url 'orchestrator:user_add' %}">Add User</a>
             <a class="btn btn-outline-secondary btn-sm" href="{% url 'orchestrator:user_list' %}">Manage Users</a>
+            <a class="btn btn-outline-secondary btn-sm" href="{% url 'orchestrator:lease_log' %}">Lease Log</a>
           {% endif %}
           {% if request.user.is_authenticated %}
             <span class="navbar-text me-2">{{ request.user.username }}</span>

@@ -1,0 +1,103 @@
+{% extends "orchestrator/base.html" %}
+{% load static %}
+
+{% block content %}
+<h2>Lease Log</h2>
+
+<form method="get" class="row g-2 mb-3">
+  <div class="col-md-2">
+    <input type="text" class="form-control" name="q" placeholder="Search (user, server, lab)" value="{{ selected.q }}">
+  </div>
+  <div class="col-md-2">
+    <select class="form-select" name="event">
+      <option value="">All events</option>
+      {% for ev in events %}
+        <option value="{{ ev }}" {% if selected.event == ev %}selected{% endif %}>{{ ev }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-2">
+    <select class="form-select" name="user">
+      <option value="">All users</option>
+      {% for u in users %}
+        <option value="{{ u }}" {% if selected.user == u %}selected{% endif %}>{{ u }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-2">
+    <select class="form-select" name="server">
+      <option value="">All servers</option>
+      {% for s in servers %}
+        <option value="{{ s }}" {% if selected.server == s %}selected{% endif %}>{{ s }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-1">
+    <input type="date" class="form-control" name="start" value="{{ selected.start }}" placeholder="Start">
+  </div>
+  <div class="col-md-1">
+    <input type="date" class="form-control" name="end" value="{{ selected.end }}" placeholder="End">
+  </div>
+  <div class="col-md-2 d-flex gap-2">
+    <button class="btn btn-outline-secondary flex-fill" type="submit">Filter</button>
+    <a class="btn btn-outline-secondary flex-fill" href="{% url 'orchestrator:lease_log' %}">Clear</a>
+  </div>
+</form>
+
+{% if missing_table %}
+<div class="alert alert-warning">Lease log storage is not initialized yet. Run database migrations to create the LeaseLog table.</div>
+{% endif %}
+
+<div class="table-responsive">
+  <table class="table table-striped table-hover">
+    <thead>
+      <tr>
+        <th>Time</th>
+        <th>Event</th>
+        <th>User</th>
+        <th>Server</th>
+        <th>Lab</th>
+        <th>UUID</th>
+        <th>Minutes</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for log in page_obj.object_list %}
+      <tr>
+        <td>{{ log.created_at|date:"Y-m-d H:i:s" }}</td>
+        <td>{{ log.get_event_display }}</td>
+        <td>{{ log.username|default:log.user.username }}</td>
+        <td>{{ log.server_name|default:log.server.name }}</td>
+        <td>{{ log.lab_name }}</td>
+        <td class="text-muted">{{ log.lab_uuid }}</td>
+        <td>{% if log.minutes %}{{ log.minutes }}{% else %}-{% endif %}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="7" class="text-center text-muted">No log entries</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<nav aria-label="Lease log pagination">
+  <ul class="pagination">
+    {% if page_obj.has_previous %}
+      <li class="page-item"><a class="page-link" href="?page=1{% if request.GET.urlencode %}&{{ request.GET.urlencode|cut:'page='|cut:page_obj.number|stringformat:'s' }}{% endif %}">« First</a></li>
+      <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&{{ request.GET.urlencode|default:'' }}">‹ Prev</a></li>
+    {% else %}
+      <li class="page-item disabled"><span class="page-link">« First</span></li>
+      <li class="page-item disabled"><span class="page-link">‹ Prev</span></li>
+    {% endif %}
+    <li class="page-item active"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
+    {% if page_obj.has_next %}
+      <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&{{ request.GET.urlencode|default:'' }}">Next ›</a></li>
+      <li class="page-item"><a class="page-link" href="?page={{ page_obj.paginator.num_pages }}&{{ request.GET.urlencode|default:'' }}">Last »</a></li>
+    {% else %}
+      <li class="page-item disabled"><span class="page-link">Next ›</span></li>
+      <li class="page-item disabled"><span class="page-link">Last »</span></li>
+    {% endif %}
+  </ul>
+  <p class="text-muted small">Entries retained for 90 days.</p>
+</nav>
+
+{% endblock %}

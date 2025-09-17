@@ -31,4 +31,5 @@ urlpatterns = [
     path("pool/metrics/", views.pool_metrics, name="pool_metrics"),
     path("pool/metrics/data/", views.pool_metrics_data, name="pool_metrics_data"),
     path("pool/counts/", views.pool_counts, name="pool_counts"),
+    path("logs/leases/", views.lease_log, name="lease_log"),
 ]

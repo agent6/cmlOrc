@@ -8,7 +8,8 @@ from django.db import transaction
 from typing import Iterable
 from django.conf import settings
 
-from .models import CMLServer, HealthSettings
+from .models import CMLServer, HealthSettings, LeaseLog
+from django.db import connection
 from .cml import CMLClient
 
 logger = logging.getLogger(__name__)
@@ -137,12 +138,53 @@ def assign_server_to_student_by_name(server: CMLServer, user, lab_name_or_uuid: 
             now = timezone.now()
             server.assigned_until = now + timezone.timedelta(minutes=minutes)
             server.save(update_fields=["assigned_until"])
+            try:
+                if "orchestrator_leaselog" in connection.introspection.table_names():
+                    LeaseLog.objects.create(
+                        event=LeaseLog.EVT_EXTENDED,
+                        user=user,
+                        username=getattr(user, "username", ""),
+                        server=server,
+                        server_name=server.name,
+                        lab_uuid=server.assigned_lab_uuid or "",
+                        lab_name=server.assigned_lab_name or lab_name_or_uuid or "",
+                        minutes=minutes,
+                    )
+            except Exception:
+                logger.debug("Failed to record lease extension for %s on %s", getattr(user, 'username', '?'), server.name)
         return
 
     # Otherwise, perform full assignment and lab preparation
     with transaction.atomic():
         server.assign(user, lab_uuid, minutes=minutes, lab_name=lab_name_or_uuid)
+        try:
+            if "orchestrator_leaselog" in connection.introspection.table_names():
+                LeaseLog.objects.create(
+                    event=LeaseLog.EVT_LEASED,
+                    user=user,
+                    username=getattr(user, "username", ""),
+                    server=server,
+                    server_name=server.name,
+                    lab_uuid=lab_uuid,
+                    lab_name=lab_name_or_uuid or "",
+                    minutes=minutes,
+                )
+        except Exception:
+            logger.debug("Failed to record lease for %s on %s", getattr(user, 'username', '?'), server.name)
     ensure_only_lab_running_and_wiped_then_start(server, lab_uuid)
+    try:
+        if "orchestrator_leaselog" in connection.introspection.table_names():
+            LeaseLog.objects.create(
+                event=LeaseLog.EVT_LAB_STARTED,
+                user=user,
+                username=getattr(user, "username", ""),
+                server=server,
+                server_name=server.name,
+                lab_uuid=lab_uuid,
+                lab_name=lab_name_or_uuid or "",
+            )
+    except Exception:
+        logger.debug("Failed to record lab_started for %s on %s", getattr(user, 'username', '?'), server.name)
 
 
 def get_user_assignment(user) -> CMLServer | None:
@@ -223,7 +265,27 @@ def _release_cleanup(server_pk: int):
 
 
 def release_server(server: CMLServer, stop_and_wipe: bool = True):
+    # Snapshot details prior to clearing
+    prev_user = server.assigned_to
+    prev_username = getattr(server.assigned_to, "username", "") if server.assigned_to_id else ""
+    prev_lab_uuid = server.assigned_lab_uuid or ""
+    prev_lab_name = server.assigned_lab_name or ""
     server.release()
+    try:
+        if (prev_user or prev_lab_uuid or prev_lab_name) and (
+            "orchestrator_leaselog" in connection.introspection.table_names()
+        ):
+            LeaseLog.objects.create(
+                event=LeaseLog.EVT_RELEASED,
+                user=prev_user,
+                username=prev_username,
+                server=server,
+                server_name=server.name,
+                lab_uuid=prev_lab_uuid,
+                lab_name=prev_lab_name,
+            )
+    except Exception:
+        logger.debug("Failed to record release for %s on %s", prev_username or "-", server.name)
     if not stop_and_wipe:
         return
     try:
@@ -244,6 +306,21 @@ def check_and_release_expired_leases():
             release_server(s)
         except Exception:
             logger.exception("Lease sweeper: error releasing %s", s.name)
+
+
+def prune_old_lease_logs(retention_days: int = 90):
+    try:
+        # Skip if table isn't created yet (e.g., before migrations)
+        if "orchestrator_leaselog" not in connection.introspection.table_names():
+            return
+        cutoff = timezone.now() - timezone.timedelta(days=retention_days)
+        qs = LeaseLog.objects.filter(created_at__lt=cutoff)
+        deleted, _ = qs.delete()
+        if deleted:
+            logger.info("LeaseLog: pruned %d old record(s) older than %d days", deleted, retention_days)
+    except Exception:
+        # Fail-quiet in worker contexts
+        logger.debug("LeaseLog prune failed", exc_info=True)
 
 
 def record_pool_snapshot():

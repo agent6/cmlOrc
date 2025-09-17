@@ -124,3 +124,40 @@ class PoolStat(models.Model):
 
     def __str__(self):
         return f"PoolStat {self.created_at:%Y-%m-%d %H:%M:%S} avail={self.available}/{self.total}"
+
+
+class LeaseLog(models.Model):
+    EVT_LEASED = "leased"
+    EVT_EXTENDED = "extended"
+    EVT_LAB_STARTED = "lab_started"
+    EVT_RELEASED = "released"
+    EVENT_CHOICES = [
+        (EVT_LEASED, "Leased"),
+        (EVT_EXTENDED, "Extended"),
+        (EVT_LAB_STARTED, "Lab Started"),
+        (EVT_RELEASED, "Released"),
+    ]
+
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    event = models.CharField(max_length=20, choices=EVENT_CHOICES)
+
+    # References (denormalized snapshots kept for historical readability)
+    user = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name="lease_logs")
+    username = models.CharField(max_length=150, blank=True)
+    server = models.ForeignKey(CMLServer, on_delete=models.CASCADE, related_name="lease_logs")
+    server_name = models.CharField(max_length=100, blank=True)
+    lab_uuid = models.CharField(max_length=64, blank=True)
+    lab_name = models.CharField(max_length=255, blank=True)
+    minutes = models.PositiveIntegerField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["created_at"]),
+            models.Index(fields=["event"]),
+            models.Index(fields=["username"]),
+            models.Index(fields=["server_name"]),
+        ]
+
+    def __str__(self):
+        return f"{self.created_at:%Y-%m-%d %H:%M:%S} {self.event} {self.username or (self.user.username if self.user else '-') } @ {self.server_name or self.server.name}"

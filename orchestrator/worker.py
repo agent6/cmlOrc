@@ -12,7 +12,7 @@ from django.db import close_old_connections
 from django.conf import settings
 
 from .models import CMLServer, HealthSettings
-from .services import probe_health, check_and_release_expired_leases, record_pool_snapshot, release_server
+from .services import probe_health, check_and_release_expired_leases, record_pool_snapshot, release_server, prune_old_lease_logs
 
 
 _worker_thread = None
@@ -25,6 +25,7 @@ _skip_until: dict[int, float] = {}
 _confirm_remaining: dict[int, int] = {}
 _settings_snapshot: tuple | None = None
 _last_stats_time: float = 0.0
+_last_prune_time: float = 0.0
 
 # Simple round-robin state to ensure we check one server per tick
 _server_ids: list[int] = []
@@ -158,6 +159,13 @@ def _loop():
                 if (time.time() - globals().get("_last_stats_time", 0.0)) >= max(5, quick_delay) and (time.time() - _last_stats_time) >= (hs.stats_interval_sec if 'hs' in locals() else 60):
                     record_pool_snapshot()
                     globals()["_last_stats_time"] = time.time()
+            except Exception:
+                pass
+            # Daily prune of LeaseLog (90-day retention)
+            try:
+                if (time.time() - globals().get("_last_prune_time", 0.0)) >= 3600:
+                    prune_old_lease_logs(90)
+                    globals()["_last_prune_time"] = time.time()
             except Exception:
                 pass
         except Exception:

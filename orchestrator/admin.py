@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import CMLServer, HealthSettings, PoolStat
+from .models import CMLServer, HealthSettings, PoolStat, LeaseLog
 
 
 @admin.register(CMLServer)
@@ -18,4 +18,12 @@ class HealthSettingsAdmin(admin.ModelAdmin):
 @admin.register(PoolStat)
 class PoolStatAdmin(admin.ModelAdmin):
     list_display = ("created_at", "total", "available", "in_use", "unavailable", "initializing")
+    ordering = ("-created_at",)
+
+
+@admin.register(LeaseLog)
+class LeaseLogAdmin(admin.ModelAdmin):
+    list_display = ("created_at", "event", "username", "server_name", "lab_name", "lab_uuid", "minutes")
+    list_filter = ("event",)
+    search_fields = ("username", "server_name", "lab_name", "lab_uuid")
     ordering = ("-created_at",)

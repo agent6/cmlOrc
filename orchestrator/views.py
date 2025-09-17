@@ -16,7 +16,9 @@ from urllib.parse import urlsplit
 import ipaddress
 import uuid
 
-from .models import CMLServer, HealthSettings
+from .models import CMLServer, HealthSettings, LeaseLog
+from django.db import connection
+from django.db.models import Q
 from .forms import (
     CMLServerForm,
     AssignmentForm,
@@ -299,6 +301,102 @@ def user_delete(request, pk: int):
         messages.success(request, f"Deleted user {username}.")
         return redirect("orchestrator:user_list")
     return render(request, "orchestrator/user_delete_confirm.html", {"user_obj": u})
+
+
+@login_required
+@user_passes_test(_staff_required)
+def lease_log(request):
+    # Filters
+    q = (request.GET.get("q") or "").strip()
+    event = (request.GET.get("event") or "").strip()
+    user = (request.GET.get("user") or "").strip()
+    server = (request.GET.get("server") or "").strip()
+    start = (request.GET.get("start") or "").strip()
+    end = (request.GET.get("end") or "").strip()
+
+    # If LeaseLog table isn't present yet, render empty state with hint
+    if "orchestrator_leaselog" not in connection.introspection.table_names():
+        from django.core.paginator import Paginator
+        empty = []
+        paginator = Paginator(empty, 50)
+        page_obj = paginator.get_page(1)
+        servers = CMLServer.objects.order_by("name").values_list("name", flat=True)
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        users = User.objects.order_by("username").values_list("username", flat=True)
+        events = [e for e, _ in LeaseLog.EVENT_CHOICES]
+        ctx = {
+            "page_obj": page_obj,
+            "events": events,
+            "servers": servers,
+            "users": users,
+            "selected": {"q": q, "event": event, "user": user, "server": server, "start": start, "end": end},
+            "missing_table": True,
+        }
+        return render(request, "orchestrator/lease_log.html", ctx)
+
+    logs = LeaseLog.objects.select_related("user", "server").all()
+    if event:
+        logs = logs.filter(event=event)
+    if user:
+        logs = logs.filter(Q(username__iexact=user) | Q(user__username__iexact=user))
+    if server:
+        logs = logs.filter(Q(server_name__iexact=server) | Q(server__name__iexact=server))
+    if q:
+        logs = logs.filter(
+            Q(lab_name__icontains=q)
+            | Q(lab_uuid__icontains=q)
+            | Q(username__icontains=q)
+            | Q(server_name__icontains=q)
+        )
+    # Date filters (YYYY-MM-DD)
+    try:
+        if start:
+            dt = timezone.datetime.fromisoformat(start)
+            if dt.tzinfo is None:
+                dt = timezone.make_aware(dt)
+            logs = logs.filter(created_at__gte=dt)
+    except Exception:
+        pass
+    try:
+        if end:
+            dt = timezone.datetime.fromisoformat(end)
+            if dt.tzinfo is None:
+                dt = timezone.make_aware(dt)
+            logs = logs.filter(created_at__lte=dt)
+    except Exception:
+        pass
+
+    # Pagination
+    from django.core.paginator import Paginator
+
+    paginator = Paginator(logs.order_by("-created_at"), 50)
+    page_number = request.GET.get("page")
+    page_obj = paginator.get_page(page_number)
+
+    # For filter dropdowns
+    servers = CMLServer.objects.order_by("name").values_list("name", flat=True)
+    from django.contrib.auth import get_user_model
+
+    User = get_user_model()
+    users = User.objects.order_by("username").values_list("username", flat=True)
+    events = [e for e, _ in LeaseLog.EVENT_CHOICES]
+
+    ctx = {
+        "page_obj": page_obj,
+        "events": events,
+        "servers": servers,
+        "users": users,
+        "selected": {
+            "q": q,
+            "event": event,
+            "user": user,
+            "server": server,
+            "start": start,
+            "end": end,
+        },
+    }
+    return render(request, "orchestrator/lease_log.html", ctx)
 
 
 @login_required
