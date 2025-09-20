@@ -35,6 +35,7 @@ from .services import (
     check_and_release_expired_leases,
     push_lab_yaml_to_server,
     probe_health,
+    record_pool_snapshot,
 )
 from .cml import CMLClient
 
@@ -104,7 +105,8 @@ def server_edit(request, pk: int):
             return redirect("orchestrator:home")
     else:
         form = CMLServerForm(instance=server)
-    return render(request, "orchestrator/server_form.html", {"form": form, "title": f"Edit {server.name}"})
+    ctx = {"form": form, "title": f"Edit {server.name}", "server_obj": server}
+    return render(request, "orchestrator/server_form.html", ctx)
 
 
 @login_required
@@ -138,6 +140,23 @@ def server_clone(request, pk: int):
         }
         form = CMLServerForm(initial=initial)
     return render(request, "orchestrator/server_form.html", {"form": form, "title": f"Clone from {src.name}"})
+
+
+@login_required
+def server_maintenance(request, pk: int):
+    server = get_object_or_404(CMLServer, pk=pk)
+    if server.status == CMLServer.STATUS_MAINTENANCE:
+        server.clear_maintenance()
+        messages.success(request, f"{server.name} exited maintenance mode.")
+    else:
+        if server.assigned_to_id:
+            messages.warning(
+                request,
+                f"{server.name} is currently assigned; release it when ready to avoid disrupting the user.",
+            )
+        server.mark_maintenance()
+        messages.success(request, f"Marked {server.name} as Maintenance.")
+    return redirect("orchestrator:home")
 
 
 @login_required
@@ -489,7 +508,20 @@ def pool_metrics(request):
         stats = PoolStat.objects.all()[:200]
         total = CMLServer.objects.count()
         available = CMLServer.objects.filter(status=CMLServer.STATUS_AVAILABLE).count()
-        return render(request, "orchestrator/pool_metrics.html", {"stats": stats, "pool_total": total, "pool_available": available})
+        in_use = CMLServer.objects.filter(status=CMLServer.STATUS_IN_USE).count()
+        unavailable = CMLServer.objects.filter(status=CMLServer.STATUS_UNAVAILABLE).count()
+        maintenance = CMLServer.objects.filter(status=CMLServer.STATUS_MAINTENANCE).count()
+        initializing = CMLServer.objects.filter(status=CMLServer.STATUS_INITIALIZING).count()
+        ctx = {
+            "stats": stats,
+            "pool_total": total,
+            "pool_available": available,
+            "pool_in_use": in_use,
+            "pool_unavailable": unavailable,
+            "pool_maintenance": maintenance,
+            "pool_initializing": initializing,
+        }
+        return render(request, "orchestrator/pool_metrics.html", ctx)
     except Exception as e:
         # Attempt to create the table dynamically (dev convenience); else show guidance
         try:
@@ -501,7 +533,20 @@ def pool_metrics(request):
             stats = PoolStat.objects.all()[:200]
             total = CMLServer.objects.count()
             available = CMLServer.objects.filter(status=CMLServer.STATUS_AVAILABLE).count()
-            return render(request, "orchestrator/pool_metrics.html", {"stats": stats, "pool_total": total, "pool_available": available})
+            in_use = CMLServer.objects.filter(status=CMLServer.STATUS_IN_USE).count()
+            unavailable = CMLServer.objects.filter(status=CMLServer.STATUS_UNAVAILABLE).count()
+            maintenance = CMLServer.objects.filter(status=CMLServer.STATUS_MAINTENANCE).count()
+            initializing = CMLServer.objects.filter(status=CMLServer.STATUS_INITIALIZING).count()
+            ctx = {
+                "stats": stats,
+                "pool_total": total,
+                "pool_available": available,
+                "pool_in_use": in_use,
+                "pool_unavailable": unavailable,
+                "pool_maintenance": maintenance,
+                "pool_initializing": initializing,
+            }
+            return render(request, "orchestrator/pool_metrics.html", ctx)
         except Exception as e2:
             return render(request, "orchestrator/pool_metrics_missing.html", {"error": str(e2)})
 
@@ -534,6 +579,7 @@ def pool_metrics_data(request):
         available = []
         in_use = []
         unavailable = []
+        maintenance = []
         initializing = []
         total = []
         for s in qs:
@@ -542,6 +588,7 @@ def pool_metrics_data(request):
             available.append(s.available)
             in_use.append(s.in_use)
             unavailable.append(s.unavailable)
+            maintenance.append(getattr(s, "maintenance", 0))
             initializing.append(s.initializing)
         return JsonResponse({
             "labels": labels,
@@ -550,11 +597,23 @@ def pool_metrics_data(request):
                 "available": available,
                 "in_use": in_use,
                 "unavailable": unavailable,
+                "maintenance": maintenance,
                 "initializing": initializing,
             }
         })
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
+
+
+@login_required
+def pool_metrics_snapshot(request):
+    if request.method == "POST":
+        try:
+            record_pool_snapshot()
+            messages.success(request, "Recorded current pool snapshot.")
+        except Exception as e:
+            messages.error(request, f"Snapshot failed: {e}")
+    return redirect("orchestrator:pool_metrics")
 
 
 @login_required

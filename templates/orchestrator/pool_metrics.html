@@ -1,7 +1,21 @@
 {% extends "orchestrator/base.html" %}
 {% block content %}
   <h2>Pool Metrics</h2>
-  <p class="text-muted">Current available: <strong>{{ pool_available }}</strong> / {{ pool_total }}</p>
+  <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+    <p class="text-muted mb-0">Current snapshot</p>
+    <form method="post" action="{% url 'orchestrator:pool_metrics_snapshot' %}" class="d-inline">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-outline-primary btn-sm">Poll Now</button>
+    </form>
+  </div>
+  <div class="d-flex flex-wrap gap-2 mb-4">
+    <span class="badge bg-primary">Total: {{ pool_total }}</span>
+    <span class="badge bg-success">Available: {{ pool_available }}</span>
+    <span class="badge bg-warning text-dark">In Use: {{ pool_in_use }}</span>
+    <span class="badge bg-dark">Maintenance: {{ pool_maintenance }}</span>
+    <span class="badge bg-secondary">Unavailable: {{ pool_unavailable }}</span>
+    <span class="badge bg-info text-dark">Initializing: {{ pool_initializing }}</span>
+  </div>
 
   <div class="mb-3">
     <canvas id="poolChart" height="120"></canvas>
@@ -38,11 +52,12 @@
         const labels = data.labels;
         const s = data.series || {};
         const datasets = [
-          {label:'Available', data:s.available||[], borderColor:'#198754', backgroundColor:'rgba(25,135,84,0.2)', tension:0.2},
-          {label:'In Use', data:s.in_use||[], borderColor:'#ffc107', backgroundColor:'rgba(255,193,7,0.2)', tension:0.2},
-          {label:'Unavailable', data:s.unavailable||[], borderColor:'#6c757d', backgroundColor:'rgba(108,117,125,0.2)', tension:0.2},
-          {label:'Initializing', data:s.initializing||[], borderColor:'#0dcaf0', backgroundColor:'rgba(13,202,240,0.2)', tension:0.2},
-          {label:'Total', data:s.total||[], borderColor:'#0d6efd', backgroundColor:'rgba(13,110,253,0.1)', borderDash:[5,5], tension:0.2}
+          {label:'Available', data:s.available||[], borderColor:'#198754', backgroundColor:'rgba(25,135,84,0.2)', tension:0.25},
+          {label:'In Use', data:s.in_use||[], borderColor:'#ffc107', backgroundColor:'rgba(255,193,7,0.2)', tension:0.25},
+          {label:'Maintenance', data:s.maintenance||[], borderColor:'#fd7e14', backgroundColor:'rgba(253,126,20,0.2)', tension:0.25},
+          {label:'Unavailable', data:s.unavailable||[], borderColor:'#6c757d', backgroundColor:'rgba(108,117,125,0.2)', tension:0.25},
+          {label:'Initializing', data:s.initializing||[], borderColor:'#0dcaf0', backgroundColor:'rgba(13,202,240,0.2)', tension:0.25},
+          {label:'Total', data:s.total||[], borderColor:'#0d6efd', backgroundColor:'rgba(13,110,253,0.1)', borderDash:[5,5], tension:0.25}
         ];
         if(!chart){
           chart = new Chart(ctx, {
@@ -64,7 +79,7 @@
           });
         } else {
           chart.data.labels = labels;
-          chart.data.datasets.forEach((ds, idx) => { ds.data = datasets[idx].data; });
+          chart.data.datasets = datasets;
           chart.update();
         }
       }

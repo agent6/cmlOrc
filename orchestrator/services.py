@@ -329,6 +329,7 @@ def record_pool_snapshot():
         total = CMLServer.objects.count()
         available = CMLServer.objects.filter(status=CMLServer.STATUS_AVAILABLE).count()
         in_use = CMLServer.objects.filter(status=CMLServer.STATUS_IN_USE).count()
+        maintenance = CMLServer.objects.filter(status=CMLServer.STATUS_MAINTENANCE).count()
         unavailable = CMLServer.objects.filter(status=CMLServer.STATUS_UNAVAILABLE).count()
         initializing = CMLServer.objects.filter(status=CMLServer.STATUS_INITIALIZING).count()
         PoolStat.objects.create(
@@ -336,6 +337,7 @@ def record_pool_snapshot():
             available=available,
             in_use=in_use,
             unavailable=unavailable,
+            maintenance=maintenance,
             initializing=initializing,
         )
     except Exception as e:

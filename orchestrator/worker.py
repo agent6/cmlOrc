@@ -110,18 +110,18 @@ def _loop():
                         _skip_until[s.pk] = now2 + normal_interval
                         s.last_health_ok = True
                         s.last_health_at = timezone.now()
+                        update_fields = ["last_health_ok", "last_health_at"]
                         if s.assigned_to:
                             if s.status != s.STATUS_IN_USE:
                                 s.status = s.STATUS_IN_USE
-                                s.save(update_fields=["last_health_ok", "last_health_at", "status"])
-                            else:
-                                s.save(update_fields=["last_health_ok", "last_health_at"])
+                                update_fields.append("status")
                         else:
-                            if s.status != s.STATUS_AVAILABLE:
+                            if s.status == s.STATUS_MAINTENANCE:
+                                pass
+                            elif s.status != s.STATUS_AVAILABLE:
                                 s.status = s.STATUS_AVAILABLE
-                                s.save(update_fields=["last_health_ok", "last_health_at", "status"])
-                            else:
-                                s.save(update_fields=["last_health_ok", "last_health_at"])
+                                update_fields.append("status")
+                        s.save(update_fields=update_fields)
                     else:
                         if s.pk not in _confirm_remaining:
                             _confirm_remaining[s.pk] = quick_retries
@@ -138,8 +138,9 @@ def _loop():
                                 logger.info("Health confirmation retry for %s; %d attempt(s) remaining", s.name, remaining)
                             else:
                                 _confirm_remaining.pop(s.pk, None)
-                                if s.status != s.STATUS_UNAVAILABLE:
-                                    s.mark_unavailable()
+                                prev_status = s.status
+                                s.mark_unavailable()
+                                if prev_status not in (s.STATUS_UNAVAILABLE, s.STATUS_MAINTENANCE):
                                     # If this server was assigned, release it immediately so the user can be reassigned.
                                     try:
                                         if s.assigned_to_id:

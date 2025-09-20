@@ -7,6 +7,7 @@
       {% if s.status == 'available' %}bg-success
       {% elif s.status == 'in_use' %}bg-warning
       {% elif s.status == 'initializing' %}bg-info
+      {% elif s.status == 'maintenance' %}bg-dark
       {% else %}bg-secondary
       {% endif %}">
       {{ s.get_status_display }}
@@ -18,11 +19,9 @@
   <td>{% if s.last_health_ok %}OK{% else %}Fail{% endif %}</td>
   <td class="text-nowrap">
     <a class="btn btn-outline-secondary btn-sm" href="{% url 'orchestrator:server_edit' s.pk %}">Edit</a>
-    <a class="btn btn-outline-secondary btn-sm" href="{% url 'orchestrator:server_clone' s.pk %}">Clone</a>
     <a class="btn btn-outline-info btn-sm" href="{% url 'orchestrator:server_test' s.pk %}">Test</a>
     {% if s.assigned_to %}
     <a class="btn btn-outline-danger btn-sm" href="{% url 'orchestrator:server_release' s.pk %}">Release</a>
     {% endif %}
-    <a class="btn btn-outline-danger btn-sm" href="{% url 'orchestrator:server_delete' s.pk %}">Delete</a>
   </td>
 </tr>

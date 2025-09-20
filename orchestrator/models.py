@@ -19,11 +19,13 @@ class CMLServer(models.Model):
     STATUS_IN_USE = "in_use"
     STATUS_UNAVAILABLE = "unavailable"
     STATUS_INITIALIZING = "initializing"
+    STATUS_MAINTENANCE = "maintenance"
     STATUS_CHOICES = [
         (STATUS_AVAILABLE, "Available"),
         (STATUS_IN_USE, "In Use"),
         (STATUS_UNAVAILABLE, "Unavailable"),
         (STATUS_INITIALIZING, "Initializing"),
+        (STATUS_MAINTENANCE, "Maintenance"),
     ]
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_INITIALIZING)
     last_health_ok = models.BooleanField(default=False)
@@ -40,16 +42,42 @@ class CMLServer(models.Model):
 
     def mark_unavailable(self):
         self.last_health_ok = False
-        self.status = self.STATUS_UNAVAILABLE
         self.last_health_at = timezone.now()
-        self.save(update_fields=["last_health_ok", "status", "last_health_at"])
+        update_fields = ["last_health_ok", "last_health_at"]
+        if self.status != self.STATUS_MAINTENANCE:
+            self.status = self.STATUS_UNAVAILABLE
+            update_fields.append("status")
+        self.save(update_fields=update_fields)
 
     def mark_available(self):
         self.last_health_ok = True
-        if not self.assigned_to:
-            self.status = self.STATUS_AVAILABLE
         self.last_health_at = timezone.now()
-        self.save(update_fields=["last_health_ok", "status", "last_health_at"])
+        update_fields = ["last_health_ok", "last_health_at"]
+        if self.assigned_to:
+            if self.status != self.STATUS_IN_USE:
+                self.status = self.STATUS_IN_USE
+                update_fields.append("status")
+        elif self.status != self.STATUS_MAINTENANCE:
+            if self.status != self.STATUS_AVAILABLE:
+                self.status = self.STATUS_AVAILABLE
+                update_fields.append("status")
+        self.save(update_fields=update_fields)
+
+    def mark_maintenance(self):
+        if self.status != self.STATUS_MAINTENANCE:
+            self.status = self.STATUS_MAINTENANCE
+            self.save(update_fields=["status"])
+
+    def clear_maintenance(self):
+        if self.status != self.STATUS_MAINTENANCE:
+            return
+        if self.assigned_to:
+            new_status = self.STATUS_IN_USE
+        else:
+            new_status = self.STATUS_AVAILABLE if self.last_health_ok else self.STATUS_UNAVAILABLE
+        if new_status != self.status:
+            self.status = new_status
+            self.save(update_fields=["status"])
 
     def assign(self, user, lab_uuid: str, minutes: int = 60, lab_name: Optional[str] = None):
         now = timezone.now()
@@ -67,8 +95,18 @@ class CMLServer(models.Model):
         self.assigned_lab_name = None
         self.assigned_at = None
         self.assigned_until = None
-        self.status = self.STATUS_AVAILABLE if self.last_health_ok else self.STATUS_UNAVAILABLE
-        self.save()
+        new_status = self.STATUS_AVAILABLE if self.last_health_ok else self.STATUS_UNAVAILABLE
+        update_fields = [
+            "assigned_to",
+            "assigned_lab_uuid",
+            "assigned_lab_name",
+            "assigned_at",
+            "assigned_until",
+        ]
+        if self.status != self.STATUS_MAINTENANCE:
+            self.status = new_status
+            update_fields.append("status")
+        self.save(update_fields=update_fields)
 
 
 class HealthSettings(models.Model):
@@ -117,13 +155,17 @@ class PoolStat(models.Model):
     available = models.PositiveIntegerField()
     in_use = models.PositiveIntegerField()
     unavailable = models.PositiveIntegerField()
+    maintenance = models.PositiveIntegerField(default=0)
     initializing = models.PositiveIntegerField()
 
     class Meta:
         ordering = ["-created_at"]
 
     def __str__(self):
-        return f"PoolStat {self.created_at:%Y-%m-%d %H:%M:%S} avail={self.available}/{self.total}"
+        return (
+            f"PoolStat {self.created_at:%Y-%m-%d %H:%M:%S} avail={self.available}/"
+            f"{self.total} maint={self.maintenance}"
+        )
 
 
 class LeaseLog(models.Model):
