@@ -25,6 +25,18 @@ def _client(server: CMLServer, timeout: int | None = None) -> CMLClient:
     )
 
 
+def _mark_server_maintenance(server: CMLServer, reason: str):
+    """Move the server into maintenance mode when orchestrator interaction fails."""
+    prev_status = server.status
+    try:
+        server.mark_maintenance()
+        logger.warning("Marked %s as maintenance due to orchestrator issue: %s", server.name, reason)
+        if prev_status == server.STATUS_MAINTENANCE:
+            logger.debug("Server %s was already in maintenance (reason=%s)", server.name, reason)
+    except Exception:
+        logger.exception("Failed to mark %s as maintenance (%s)", server.name, reason)
+
+
 def probe_health(server: CMLServer) -> bool:
     """Lightweight health probe.
     Strategy:
@@ -117,10 +129,47 @@ def assign_server_to_student_by_name(server: CMLServer, user, lab_name_or_uuid: 
     only extend the lease time and avoid stopping/wiping/restarting labs.
     """
     c = _client(server)
-    c.authenticate()
-    lab_uuid = c.resolve_lab_uuid_by_name(lab_name_or_uuid)
+    try:
+        c.authenticate()
+    except urllib.error.URLError as e:
+        _mark_server_maintenance(server, f"authentication failed ({e})")
+        raise RuntimeError(f"{server.name}: controller unreachable; host moved to maintenance") from e
+    except urllib.error.HTTPError as e:
+        if e.code == 400:
+            _mark_server_maintenance(server, "authentication returned HTTP 400")
+            raise RuntimeError(f"{server.name}: controller rejected authentication (400); host moved to maintenance") from e
+        raise
+    try:
+        labs_listing = c.list_labs()
+    except urllib.error.URLError as e:
+        _mark_server_maintenance(server, f"list_labs unreachable ({e})")
+        raise RuntimeError(f"{server.name}: controller unreachable during lab listing; host moved to maintenance") from e
+    except urllib.error.HTTPError as e:
+        if e.code == 400:
+            _mark_server_maintenance(server, "list_labs returned HTTP 400")
+            raise RuntimeError(f"{server.name}: controller list_labs returned HTTP 400; host moved to maintenance") from e
+        raise
+    lab_uuid = c.resolve_lab_uuid_by_name(lab_name_or_uuid, labs=labs_listing)
     if not lab_uuid:
-        raise ValueError(f"Lab not found by name or UUID: {lab_name_or_uuid}")
+        is_empty_listing = False
+        try:
+            is_empty_listing = labs_listing is None or len(labs_listing) == 0
+        except Exception:
+            is_empty_listing = False
+        if is_empty_listing:
+            reason = f"no labs reported while searching for '{lab_name_or_uuid}'"
+            msg = (
+                f"Lab not found by name or UUID: {lab_name_or_uuid}. "
+                f"{server.name} returned an empty lab list and was moved to maintenance."
+            )
+        else:
+            reason = f"lab '{lab_name_or_uuid}' missing or mislabeled"
+            msg = (
+                f"Lab not found by name or UUID: {lab_name_or_uuid}. "
+                f"{server.name} lab labels did not match and it was moved to maintenance."
+            )
+        _mark_server_maintenance(server, reason)
+        raise ValueError(msg)
 
     # If same user + same lab, extend lease only
     same_user = server.assigned_to_id == getattr(user, "id", None)

@@ -307,7 +307,7 @@ class CMLClient:
         return None
 
     # Name/UUID helpers
-    def resolve_lab_uuid_by_name(self, name_or_uuid: str) -> Optional[str]:
+    def resolve_lab_uuid_by_name(self, name_or_uuid: str, labs=None) -> Optional[str]:
         """Return a lab UUID for a given name or UUID.
         - If the input matches an existing UUID, returns it.
         - Otherwise, searches labs by title/label/name and returns the UUID of an exact (case-insensitive) match.
@@ -315,8 +315,9 @@ class CMLClient:
         target = (name_or_uuid or "").strip()
         if not target:
             return None
-        # First, get the list of labs
-        labs = self.list_labs()
+        # First, get the list of labs (allow callers to reuse an existing listing)
+        if labs is None:
+            labs = self.list_labs()
         # If dict mapping {uuid: name}
         if isinstance(labs, dict):
             # Exact UUID
