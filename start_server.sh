@@ -6,7 +6,9 @@ set -euo pipefail
 PORT=8005
 HOST="0.0.0.0"
 APP="cmlorc.wsgi:application"
-WORKERS="${WORKERS:-5}"                 # override: WORKERS=8 ./start_server.sh
+WORKERS="${WORKERS:-10}"                # override: WORKERS=8 ./start_server.sh
+WORKER_CLASS="${WORKER_CLASS:-gthread}" # override: WORKER_CLASS=sync ./start_server.sh
+THREADS="${THREADS:-4}"                 # override: THREADS=8 ./start_server.sh
 PYTHON_BIN="${PYTHON_BIN:-python3}"     # override: PYTHON_BIN=/path/to/python ./start_server.sh
 LOG_DIR="${LOG_DIR:-./logs}"
 STDOUT_LOG="${LOG_DIR}/gunicorn.out"
@@ -52,10 +54,12 @@ ${PYTHON_BIN} manage.py makemigrations --noinput
 ${PYTHON_BIN} manage.py migrate --noinput
 ${PYTHON_BIN} manage.py collectstatic --noinput --clear
 
-echo ">> Starting Gunicorn (${WORKERS} workers) on ${HOST}:${PORT}..."
+echo ">> Starting Gunicorn (${WORKERS} workers, class=${WORKER_CLASS}, threads=${THREADS}) on ${HOST}:${PORT}..."
 # nohup keeps it running after shell exits; logs go to files
 nohup gunicorn "${APP}" \
   --workers "${WORKERS}" \
+  --worker-class "${WORKER_CLASS}" \
+  --threads "${THREADS}" \
   --bind "${HOST}:${PORT}" \
   --log-level info \
   --pid "${PID_FILE}" \
